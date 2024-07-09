@@ -26,7 +26,7 @@ public class GameState {
         this.board = new HashMap<>();
         this.currentTeam = "A";
         this.currentRole = "COMMANDER";
-        initializeBoard();
+        // initializeBoard();
     }
 
     public boolean isValidMove(Move move) {
@@ -82,33 +82,33 @@ public class GameState {
         currentPlayer = currentPlayer.equals("WHITE") ? "BLACK" : "WHITE";
     }
 
-    private void initializeBoard() {
-        // Initialize white pieces
-        board.put(new Position(0, 0), new ChessPiece("ROOK", "WHITE", new Position(0, 0)));
-        board.put(new Position(1, 0), new ChessPiece("KNIGHT", "WHITE", new Position(1, 0)));
-        board.put(new Position(2, 0), new ChessPiece("BISHOP", "WHITE", new Position(2, 0)));
-        board.put(new Position(3, 0), new ChessPiece("QUEEN", "WHITE", new Position(3, 0)));
-        board.put(new Position(4, 0), new ChessPiece("KING", "WHITE", new Position(4, 0)));
-        board.put(new Position(5, 0), new ChessPiece("BISHOP", "WHITE", new Position(5, 0)));
-        board.put(new Position(6, 0), new ChessPiece("KNIGHT", "WHITE", new Position(6, 0)));
-        board.put(new Position(7, 0), new ChessPiece("ROOK", "WHITE", new Position(7, 0)));
-        for (int i = 0; i < 8; i++) {
-            board.put(new Position(i, 1), new ChessPiece("PAWN", "WHITE", new Position(i, 1)));
-        }
-
-        // Initialize black pieces
-        board.put(new Position(0, 7), new ChessPiece("ROOK", "BLACK", new Position(0, 7)));
-        board.put(new Position(1, 7), new ChessPiece("KNIGHT", "BLACK", new Position(1, 7)));
-        board.put(new Position(2, 7), new ChessPiece("BISHOP", "BLACK", new Position(2, 7)));
-        board.put(new Position(3, 7), new ChessPiece("QUEEN", "BLACK", new Position(3, 7)));
-        board.put(new Position(4, 7), new ChessPiece("KING", "BLACK", new Position(4, 7)));
-        board.put(new Position(5, 7), new ChessPiece("BISHOP", "BLACK", new Position(5, 7)));
-        board.put(new Position(6, 7), new ChessPiece("KNIGHT", "BLACK", new Position(6, 7)));
-        board.put(new Position(7, 7), new ChessPiece("ROOK", "BLACK", new Position(7, 7)));
-        for (int i = 0; i < 8; i++) {
-            board.put(new Position(i, 6), new ChessPiece("PAWN", "BLACK", new Position(i, 6)));
-        }
-    }
+//    private void initializeBoard() {
+//        // Initialize white pieces
+//        board.put(new Position(0, 0), new ChessPiece("ROOK", "WHITE", new Position(0, 0)));
+//        board.put(new Position(1, 0), new ChessPiece("KNIGHT", "WHITE", new Position(1, 0)));
+//        board.put(new Position(2, 0), new ChessPiece("BISHOP", "WHITE", new Position(2, 0)));
+//        board.put(new Position(3, 0), new ChessPiece("QUEEN", "WHITE", new Position(3, 0)));
+//        board.put(new Position(4, 0), new ChessPiece("KING", "WHITE", new Position(4, 0)));
+//        board.put(new Position(5, 0), new ChessPiece("BISHOP", "WHITE", new Position(5, 0)));
+//        board.put(new Position(6, 0), new ChessPiece("KNIGHT", "WHITE", new Position(6, 0)));
+//        board.put(new Position(7, 0), new ChessPiece("ROOK", "WHITE", new Position(7, 0)));
+//        for (int i = 0; i < 8; i++) {
+//            board.put(new Position(i, 1), new ChessPiece("PAWN", "WHITE", new Position(i, 1)));
+//        }
+//
+//        // Initialize black pieces
+//        board.put(new Position(0, 7), new ChessPiece("ROOK", "BLACK", new Position(0, 7)));
+//        board.put(new Position(1, 7), new ChessPiece("KNIGHT", "BLACK", new Position(1, 7)));
+//        board.put(new Position(2, 7), new ChessPiece("BISHOP", "BLACK", new Position(2, 7)));
+//        board.put(new Position(3, 7), new ChessPiece("QUEEN", "BLACK", new Position(3, 7)));
+//        board.put(new Position(4, 7), new ChessPiece("KING", "BLACK", new Position(4, 7)));
+//        board.put(new Position(5, 7), new ChessPiece("BISHOP", "BLACK", new Position(5, 7)));
+//        board.put(new Position(6, 7), new ChessPiece("KNIGHT", "BLACK", new Position(6, 7)));
+//        board.put(new Position(7, 7), new ChessPiece("ROOK", "BLACK", new Position(7, 7)));
+//        for (int i = 0; i < 8; i++) {
+//            board.put(new Position(i, 6), new ChessPiece("PAWN", "BLACK", new Position(i, 6)));
+//        }
+//    }
 
     public void switchTurn() {
         if (currentRole.equals("COMMANDER")) {
