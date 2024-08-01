@@ -15,6 +15,8 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -49,26 +51,6 @@ public class ChessController {
         messagingTemplate.convertAndSend("/topic/message", "세션 [ " + sessionId + " ] 연결되었습니다.");
     }
 
-//    @MessageMapping("/move")
-//    @SendTo("/topic/message")
-//    public GameState makeMove(Move message) throws Exception {
-//        log.info("명령자 무브 이벤트 발생");
-//        log.info(message.getEventTime());
-//        Move move = message.getMove();
-//        ChessPiece piece = gameState.getBoard().get(move.getFrom());
-//        if (message.getTeam().equals(gameState.getCurrentTeam()) &&
-//                message.getRole().equals(gameState.getCurrentRole()) &&
-//                gameState.isValidMove(message.getMove())) {
-//            gameState.getBoard().put(move.getTo(), piece);
-//            gameState.getBoard().remove(move.getFrom());
-//            piece.setPosition(move.getTo());
-//            gameState.switchPlayer();
-//            gameState.updateBoard(message.getMove());
-//            gameState.switchTurn();
-//        }
-//        return gameState;
-//    }
-
     @MessageMapping("/move")
     public void handleMove(@Payload Map<String, Object> move) {
         log.info("Move received: eventTime={}, from={}, to={}, player={}",
@@ -95,15 +77,30 @@ public class ChessController {
 
             // Log the created Move object for verification
             log.info("Move object created: {}", moveObj);
+
+            gameState.processMove(moveObj);
         } catch (Exception e) {
             log.error("Error parsing move message", e);
         }
     }
 
-    @MessageMapping("/reset")
-    @SendTo("/topic/gameState")
-    public GameState resetGame() {
+    @PostMapping("/start")
+    public GameState startGame() {
         gameState = new GameState();
+        gameState.initializeBoard();
+        // Initialize the board and pieces
+        return gameState;
+    }
+
+    @GetMapping("/state")
+    public GameState getGameState() {
+        return gameState;
+    }
+
+    @MessageMapping("/reset")
+    @SendTo("/topic/message")
+    public GameState resetGame() {
+        gameState.initializeBoard();
         return gameState;
     }
 }
