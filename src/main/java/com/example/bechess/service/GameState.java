@@ -34,18 +34,49 @@ public class GameState {
 
     public void processMove(Move move) {
         printBoard();
+        log.info(String.valueOf(isValidMove(move)));
         if (isValidMove(move)) {
             updateBoard(move);
             switchPlayer();
             switchTurn();
+            log.info("현재 정보 : ", getCurrentPlayer(), getCurrentTeam(), getCurrentRole());
         }
     }
 
     public void printBoard() {
+        char[][] visualBoard = new char[8][8];
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                visualBoard[i][j] = '.';
+            }
+        }
+
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
-            log.info("PositionX: {}, PositionY: {}, Piece: {}", entry.getKey().getX(), entry.getKey().getY(), entry.getValue().getType());
+            Position pos = entry.getKey();
+            ChessPiece piece = entry.getValue();
+            visualBoard[pos.getY()][pos.getX()] = getPieceSymbol(piece);
+        }
+
+        for (int i = 7; i >= 0; i--) {
+            for (int j = 0; j < 8; j++) {
+                System.out.print(visualBoard[i][j] + " ");
+            }
+            System.out.println();
         }
     }
+
+    private char getPieceSymbol(ChessPiece piece) {
+        switch (piece.getType()) {
+            case "PAWN": return 'P';
+            case "KNIGHT": return 'N';
+            case "BISHOP": return 'B';
+            case "ROOK": return 'R';
+            case "QUEEN": return 'Q';
+            case "KING": return 'K';
+            default: return '.';
+        }
+    }
+
 
     public void switchPlayer() {
         currentPlayer = currentPlayer.equals("WHITE") ? "BLACK" : "WHITE";
@@ -62,13 +93,15 @@ public class GameState {
 
     public boolean isValidMove(Move move) {
         ChessPiece piece = board.get(move.getFrom());
+        log.info("move : {} {}, {} {}", move.getFrom().getX(), move.getFrom().getY(), move.getTo().getX(), move.getTo().getY());
+//        log.info("piece : {}, player : {}", piece.getType(), currentPlayer);
         if (piece == null || !piece.getColor().equals(currentPlayer)) {
             return false;
         }
         return piece.isValidMove(move, board, this);
     }
 
-    public void updateBoard(Move move) {
+    public void  updateBoard(Move move) {
         ChessPiece piece = board.remove(move.getFrom());
         piece.setPosition(move.getTo());
         board.put(move.getTo(), piece);
