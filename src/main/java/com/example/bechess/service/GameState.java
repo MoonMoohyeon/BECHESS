@@ -93,6 +93,10 @@ public class GameState {
 
     public boolean isValidMove(Move move) {
         ChessPiece piece = board.get(move.getFrom());
+        Position from = board.get(move.getFrom()).getPosition();
+        String type = board.get(from).getType();
+        String color = board.get(from).getColor();
+        piece = new ChessPiece(type, color, from);
         log.info("move : {} {}, {} {}", move.getFrom().getX(), move.getFrom().getY(), move.getTo().getX(), move.getTo().getY());
 //        log.info("piece : {}, player : {}", piece.getType(), currentPlayer);
         if (piece == null || !piece.getColor().equals(currentPlayer)) {
