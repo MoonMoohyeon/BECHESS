@@ -41,6 +41,7 @@ public class GameState {
             switchTurn();
             log.info("현재 정보 : ", getCurrentPlayer(), getCurrentTeam(), getCurrentRole());
         }
+        printBoard();
     }
 
     public void printBoard() {
@@ -95,25 +96,43 @@ public class GameState {
         Position from = move.getFrom();
         log.info("pos = {}, {}", from.getX(), from.getY());
         ChessPiece piece = board.get(from);
-        log.info("piece = {}", piece);
-        log.info("piece : {}, player : {}", piece.getType(), currentPlayer);
-//        if (piece == null || !piece.getColor().equals(currentPlayer)) {
-//            return false;
-//        }
+        log.info("piece : {}, {}, player : {}", piece.getType(), piece.getColor(), currentPlayer);
+        if (piece == null || !piece.getColor().equals(currentPlayer)) {
+            return false;
+        }
         return piece.isValidMove(move, board, this);
     }
 
-    public void  updateBoard(Move move) {
-        ChessPiece piece = board.remove(move.getFrom());
+    public void updateBoard(Move move) {
+        // 먼저 이동할 기물을 가져옵니다.
+        ChessPiece piece = board.get(move.getFrom());
+        if (piece == null) {
+            log.error("이동하려는 위치에 기물이 없습니다.");
+            return;
+        }
+
+        // 기물의 위치를 업데이트합니다.
         piece.setPosition(move.getTo());
+
+        // 원래 위치에서 기물을 제거합니다.
+        board.remove(move.getFrom());
+
+        // 새로운 위치에 기물을 배치합니다.
         board.put(move.getTo(), piece);
 
-        // Handle capturing
-        if (board.containsKey(move.getTo())) {
+        log.info("piece = {}, {}, {}, {}", piece.getPosition().getX(), piece.getPosition().getY(), piece.getType(), piece.getColor());
+
+        // 기물 잡기 처리
+        if (board.containsKey(move.getTo()) && board.get(move.getTo()) != piece) {
             board.remove(move.getTo());
         }
 
-        // Handle special moves
+        // 특수 이동 처리 (캐슬링, 앙파상, 프로모션 등)
+        handleSpecialMoves(move, piece);
+    }
+
+    private void handleSpecialMoves(Move move, ChessPiece piece) {
+        // KING 이동에 따른 캐슬링 불가 처리
         if (piece.getType().equals("KING")) {
             if (currentPlayer.equals("WHITE")) {
                 whiteKingMoved = true;
@@ -144,13 +163,14 @@ public class GameState {
         }
     }
 
+
     public void initializeBoard() {
         // Initialize white pieces
         board.put(new Position(0, 0), new ChessPiece("ROOK", "WHITE", new Position(0, 0)));
         board.put(new Position(1, 0), new ChessPiece("KNIGHT", "WHITE", new Position(1, 0)));
         board.put(new Position(2, 0), new ChessPiece("BISHOP", "WHITE", new Position(2, 0)));
-        board.put(new Position(3, 0), new ChessPiece("QUEEN", "WHITE", new Position(3, 0)));
-        board.put(new Position(4, 0), new ChessPiece("KING", "WHITE", new Position(4, 0)));
+        board.put(new Position(3, 0), new ChessPiece("KING", "WHITE", new Position(3, 0)));
+        board.put(new Position(4, 0), new ChessPiece("QUEEN", "WHITE", new Position(4, 0)));
         board.put(new Position(5, 0), new ChessPiece("BISHOP", "WHITE", new Position(5, 0)));
         board.put(new Position(6, 0), new ChessPiece("KNIGHT", "WHITE", new Position(6, 0)));
         board.put(new Position(7, 0), new ChessPiece("ROOK", "WHITE", new Position(7, 0)));
@@ -162,8 +182,8 @@ public class GameState {
         board.put(new Position(0, 7), new ChessPiece("ROOK", "BLACK", new Position(0, 7)));
         board.put(new Position(1, 7), new ChessPiece("KNIGHT", "BLACK", new Position(1, 7)));
         board.put(new Position(2, 7), new ChessPiece("BISHOP", "BLACK", new Position(2, 7)));
-        board.put(new Position(3, 7), new ChessPiece("QUEEN", "BLACK", new Position(3, 7)));
-        board.put(new Position(4, 7), new ChessPiece("KING", "BLACK", new Position(4, 7)));
+        board.put(new Position(3, 7), new ChessPiece("KING", "BLACK", new Position(3, 7)));
+        board.put(new Position(4, 7), new ChessPiece("QUEEN", "BLACK", new Position(4, 7)));
         board.put(new Position(5, 7), new ChessPiece("BISHOP", "BLACK", new Position(5, 7)));
         board.put(new Position(6, 7), new ChessPiece("KNIGHT", "BLACK", new Position(6, 7)));
         board.put(new Position(7, 7), new ChessPiece("ROOK", "BLACK", new Position(7, 7)));
