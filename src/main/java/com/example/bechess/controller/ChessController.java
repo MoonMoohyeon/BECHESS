@@ -77,6 +77,7 @@ public class ChessController {
 
             // Log the created Move object for verification
             log.info("Move object created: {}", moveObj);
+            log.info("movefrom = {}, {}", moveObj.getFrom().getX(), moveObj.getFrom().getY());
 
             gameState.processMove(moveObj);
         } catch (Exception e) {
