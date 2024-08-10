@@ -32,7 +32,7 @@ public class GameState {
          initializeBoard();
     }
 
-    public void processMove(Move move) {
+    public boolean processMove(Move move) {
         printBoard();
         log.info(String.valueOf(isValidMove(move)));
         if (isValidMove(move)) {
@@ -40,8 +40,12 @@ public class GameState {
             switchPlayer();
             switchTurn();
             log.info("현재 정보 : ", getCurrentPlayer(), getCurrentTeam(), getCurrentRole());
+            printBoard();
+            return true;
         }
-        printBoard();
+        else {
+            return false;
+        }
     }
 
     public void printBoard() {

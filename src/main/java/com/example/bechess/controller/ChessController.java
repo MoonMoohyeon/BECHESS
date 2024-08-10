@@ -79,7 +79,11 @@ public class ChessController {
             log.info("Move object created: {}", moveObj);
             log.info("movefrom = {}, {}", moveObj.getFrom().getX(), moveObj.getFrom().getY());
 
-            gameState.processMove(moveObj);
+            if(!gameState.processMove(moveObj)) {
+                log.info("invalidMove");
+                messagingTemplate.convertAndSend("/topic/message", "invalidMove");
+            }
+
         } catch (Exception e) {
             log.error("Error parsing move message", e);
         }
