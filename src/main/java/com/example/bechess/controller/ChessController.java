@@ -44,6 +44,10 @@ public class ChessController {
             connectedSessions.add(sessionId);
             log.info("세션 [ {} ] 연결됨", sessionId);
             broadcastConnectedMessage(sessionId);
+
+            if (connectedSessions.size() > 1) {
+                messagingTemplate.convertAndSend("/topic/message", "gameStart");
+            }
         }
     }
 
