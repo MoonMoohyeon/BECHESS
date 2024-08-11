@@ -55,8 +55,8 @@ public class ChessController {
         messagingTemplate.convertAndSend("/topic/message", "세션 [ " + sessionId + " ] 연결되었습니다.");
     }
 
-    @MessageMapping("/move")
-    public void handleMove(@Payload Map<String, Object> move) {
+    @MessageMapping("/moveWEB")
+    public void handleMoveWEB(@Payload Map<String, Object> move) {
         log.info("Move received: eventTime={}, from={}, to={}, player={}",
                 move.get("eventTime"), move.get("from"), move.get("to"), move.get("player"));
 
@@ -83,7 +83,48 @@ public class ChessController {
             log.info("Move object created: {}", moveObj);
             log.info("movefrom = {}, {}", moveObj.getFrom().getX(), moveObj.getFrom().getY());
 
-            if(!gameState.processMove(moveObj)) {
+            if(!gameState.processMoveWEB(moveObj)) {
+                log.info("invalidMove");
+                messagingTemplate.convertAndSend("/topic/message", "invalidMove");
+            }
+            else {
+                getGameState();
+            }
+
+        } catch (Exception e) {
+            log.error("Error parsing move message", e);
+        }
+    }
+
+    @MessageMapping("/moveVR")
+    public void handleMoveVR(@Payload Map<String, Object> move) {
+        log.info("Move received: eventTime={}, from={}, to={}, player={}",
+                move.get("eventTime"), move.get("from"), move.get("to"), move.get("player"));
+
+        try {
+            // Extract values from the map and cast to appropriate types
+            String eventTime = (String) move.get("eventTime");
+
+            // Extract and convert 'from' position
+            String fromJson = objectMapper.writeValueAsString(move.get("from"));
+            Position from = objectMapper.readValue(fromJson, Position.class);
+
+            // Extract and convert 'to' position
+            String toJson = objectMapper.writeValueAsString(move.get("to"));
+            Position to = objectMapper.readValue(toJson, Position.class);
+
+            // Extract and convert 'player' information
+            String playerJson = objectMapper.writeValueAsString(move.get("player"));
+            Player player = objectMapper.readValue(playerJson, Player.class);
+
+            // Create Move object
+            Move moveObj = new Move(eventTime, from, to, player);
+
+            // Log the created Move object for verification
+            log.info("Move object created: {}", moveObj);
+            log.info("movefrom = {}, {}", moveObj.getFrom().getX(), moveObj.getFrom().getY());
+
+            if(!gameState.processMoveVR(moveObj)) {
                 log.info("invalidMove");
                 messagingTemplate.convertAndSend("/topic/message", "invalidMove");
             }

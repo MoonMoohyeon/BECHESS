@@ -32,7 +32,23 @@ public class GameState {
          initializeBoard();
     }
 
-    public boolean processMove(Move move) {
+    public boolean processMoveWEB(Move move) {
+        printBoard();
+        log.info(String.valueOf(isValidMove(move)));
+        if (isValidMove(move)) {
+            updateBoard(move);
+            switchPlayer();
+            switchTurn();
+            log.info("현재 정보 : ", getCurrentPlayer(), getCurrentTeam(), getCurrentRole());
+            printBoard();
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    public boolean processMoveVR(Move move) {
         printBoard();
         log.info(String.valueOf(isValidMove(move)));
         if (isValidMove(move)) {
