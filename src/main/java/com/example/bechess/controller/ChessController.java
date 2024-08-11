@@ -87,22 +87,18 @@ public class ChessController {
                 log.info("invalidMove");
                 messagingTemplate.convertAndSend("/topic/message", "invalidMove");
             }
+            else {
+                getGameState();
+            }
 
         } catch (Exception e) {
             log.error("Error parsing move message", e);
         }
     }
 
-    @PostMapping("/start")
-    public GameState startGame() {
-        gameState = new GameState();
-        gameState.initializeBoard();
-        // Initialize the board and pieces
-        return gameState;
-    }
-
     @GetMapping("/state")
     public GameState getGameState() {
+        messagingTemplate.convertAndSend("/topic/message", gameState.getBoardState());
         return gameState;
     }
 
@@ -110,6 +106,7 @@ public class ChessController {
     @SendTo("/topic/message")
     public GameState resetGame() {
         gameState.initializeBoard();
+        messagingTemplate.convertAndSend("/topic/message", "boardReset");
         return gameState;
     }
 }

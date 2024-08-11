@@ -70,6 +70,33 @@ public class GameState {
         }
     }
 
+    // GameState 클래스 내의 메소드
+    public String getBoardState() {
+        StringBuilder boardStringBuilder = new StringBuilder();
+
+        char[][] visualBoard = new char[8][8];
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                visualBoard[i][j] = '.';
+            }
+        }
+
+        for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
+            Position pos = entry.getKey();
+            ChessPiece piece = entry.getValue();
+            visualBoard[pos.getY()][pos.getX()] = getPieceSymbol(piece);
+        }
+
+        for (int i = 7; i >= 0; i--) {
+            for (int j = 0; j < 8; j++) {
+                boardStringBuilder.append(visualBoard[i][j]).append(" ");
+            }
+            boardStringBuilder.append("\n");
+        }
+
+        return boardStringBuilder.toString();
+    }
+
     private char getPieceSymbol(ChessPiece piece) {
         switch (piece.getType()) {
             case "PAWN": return 'P';
