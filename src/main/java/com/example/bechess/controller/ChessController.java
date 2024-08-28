@@ -55,6 +55,13 @@ public class ChessController {
         messagingTemplate.convertAndSend("/topic/message", "세션 [ " + sessionId + " ] 연결되었습니다.");
     }
 
+    @MessageMapping("/timeUp") // 클라이언트에서 /app/timeUp로 메시지를 보내면 처리
+    @SendTo("/topic/timeUp") // 서버에서 /topic/timeUp로 메시지를 전송
+    public String handleTimeUp(String message) {
+        System.out.println("Received time up message: " + message);
+        return "Time is up!";
+    }
+
     @MessageMapping("/moveWEB")
     public void handleMoveWEB(@Payload Map<String, Object> move) {
         log.info("Move received: eventTime={}, from={}, to={}, player={}",
