@@ -146,7 +146,7 @@ public class ChessController {
 
     @GetMapping("/state")
     public GameState getGameState() {
-        messagingTemplate.convertAndSend("/topic/message", gameState.getBoardState());
+        messagingTemplate.convertAndSend("/topic/message", "validMove\n" + gameState.getBoardState());
         return gameState;
     }
 

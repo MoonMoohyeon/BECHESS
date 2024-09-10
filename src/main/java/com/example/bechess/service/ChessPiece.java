@@ -48,17 +48,22 @@ public class ChessPiece {
         int dx = to.getX() - from.getX();
         int dy = to.getY() - from.getY();
 
+        // Single move forward
         if (dx == 0 && dy == direction && !board.containsKey(to)) {
-            return true; // Single move forward
+            return true;
         }
+        // Double move forward (initial move)
         if (dx == 0 && dy == 2 * direction && !board.containsKey(to) && !board.containsKey(new Position(from.getX(), from.getY() + direction))) {
-            return from.getY() == (color.equals("WHITE") ? 1 : 6); // Initial double move forward
+            return from.getY() == (color.equals("WHITE") ? 1 : 6); // Initial double move only from starting rank
         }
+        // Diagonal capture
         if (Math.abs(dx) == 1 && dy == direction && board.containsKey(to) && !board.get(to).getColor().equals(color)) {
-            return true; // Capturing move
+            return true;
         }
+        // En passant capture
         if (Math.abs(dx) == 1 && dy == direction && to.equals(gameState.getEnPassantTarget())) {
-            return true; // En passant capture
+            Position capturedPawnPosition = new Position(to.getX(), from.getY());
+            return board.containsKey(capturedPawnPosition) && board.get(capturedPawnPosition).getType().equals("PAWN");
         }
         return false;
     }
@@ -106,20 +111,22 @@ public class ChessPiece {
         Position to = move.getTo();
         int dx = Math.abs(to.getX() - from.getX());
         int dy = Math.abs(to.getY() - from.getY());
+
+        // Normal king move (one square in any direction)
         if (dx <= 1 && dy <= 1) {
-            return true; // Normal move
+            return true;
         }
 
         // Castling
         if (dx == 2 && dy == 0) {
             if (color.equals("WHITE") && !gameState.isWhiteKingMoved() &&
-                    ((to.getX() == 6 && !gameState.isWhiteRook2Moved() && isPathClear(from, new Position(7, 0), board)) ||
-                            (to.getX() == 2 && !gameState.isWhiteRook1Moved() && isPathClear(from, new Position(0, 0), board)))) {
+                    ((to.getX() == 5 && !gameState.isWhiteRook2Moved() && isPathClear(from, new Position(7, 0), board) && !isInCheckOrThroughCheck(from, new Position(6, 0), board, gameState)) ||
+                            (to.getX() == 1 && !gameState.isWhiteRook1Moved() && isPathClear(from, new Position(0, 0), board) && !isInCheckOrThroughCheck(from, new Position(2, 0), board, gameState)))) {
                 return true;
             }
             if (color.equals("BLACK") && !gameState.isBlackKingMoved() &&
-                    ((to.getX() == 6 && !gameState.isBlackRook2Moved() && isPathClear(from, new Position(7, 7), board)) ||
-                            (to.getX() == 2 && !gameState.isBlackRook1Moved() && isPathClear(from, new Position(0, 7), board)))) {
+                    ((to.getX() == 5 && !gameState.isBlackRook2Moved() && isPathClear(from, new Position(7, 7), board) && !isInCheckOrThroughCheck(from, new Position(6, 7), board, gameState)) ||
+                            (to.getX() == 1 && !gameState.isBlackRook1Moved() && isPathClear(from, new Position(0, 7), board) && !isInCheckOrThroughCheck(from, new Position(2, 7), board, gameState)))) {
                 return true;
             }
         }
@@ -141,6 +148,42 @@ public class ChessPiece {
         }
         return true;
     }
+
+    private boolean isInCheckOrThroughCheck(Position from, Position to, Map<Position, ChessPiece> board, GameState gameState) {
+        // Check the final position first (to)
+        if (isPositionUnderAttack(to, board, gameState)) {
+            return true;
+        }
+
+        // For castling, check if any position between `from` and `to` is under attack
+        if (Math.abs(to.getX() - from.getX()) == 2) { // Castling case
+            int step = (to.getX() - from.getX()) / 2; // Direction of castling
+            Position midPosition = new Position(from.getX() + step, from.getY());
+
+            // Check if the intermediate position is under attack
+            if (isPositionUnderAttack(midPosition, board, gameState)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isPositionUnderAttack(Position position, Map<Position, ChessPiece> board, GameState gameState) {
+        for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
+            ChessPiece piece = entry.getValue();
+
+            // Only consider the opponent's pieces
+            if (!piece.getColor().equals(this.color)) {
+                Move potentialMove = new Move(entry.getKey(), position);
+                if (piece.isValidMove(potentialMove, board, gameState)) {
+                    return true; // The position is under attack by an opponent's piece
+                }
+            }
+        }
+        return false;
+    }
+
 
     @Override
     public boolean equals(Object o) {

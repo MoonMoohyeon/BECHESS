@@ -24,4 +24,9 @@ public class Move {
         this.to = to;
         this.player = player;
     }
+
+    public Move(Position from, Position to) {
+        this.from = from;
+        this.to = to;
+    }
 }

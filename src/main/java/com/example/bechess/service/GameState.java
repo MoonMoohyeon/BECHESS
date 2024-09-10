@@ -75,7 +75,8 @@ public class GameState {
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             Position pos = entry.getKey();
             ChessPiece piece = entry.getValue();
-            visualBoard[pos.getY()][pos.getX()] = getPieceSymbol(piece);
+            // x축 반전: visualBoard[pos.getY()][7 - pos.getX()]
+            visualBoard[pos.getY()][7 - pos.getX()] = getPieceSymbol(piece);
         }
 
         for (int i = 7; i >= 0; i--) {
@@ -86,7 +87,7 @@ public class GameState {
         }
     }
 
-    // GameState 클래스 내의 메소드
+
     public String getBoardState() {
         StringBuilder boardStringBuilder = new StringBuilder();
 
@@ -100,7 +101,8 @@ public class GameState {
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             Position pos = entry.getKey();
             ChessPiece piece = entry.getValue();
-            visualBoard[pos.getY()][pos.getX()] = getPieceSymbol(piece);
+            // x축 반전: visualBoard[pos.getY()][7 - pos.getX()]
+            visualBoard[pos.getY()][7 - pos.getX()] = getPieceSymbol(piece);
         }
 
         for (int i = 7; i >= 0; i--) {
@@ -112,6 +114,7 @@ public class GameState {
 
         return boardStringBuilder.toString();
     }
+
 
     private char getPieceSymbol(ChessPiece piece) {
         switch (piece.getType()) {
@@ -179,14 +182,37 @@ public class GameState {
     }
 
     private void handleSpecialMoves(Move move, ChessPiece piece) {
-        // KING 이동에 따른 캐슬링 불가 처리
+        // KING 이동에 따른 캐슬링 불가 처리 및 캐슬링 이동 처리
         if (piece.getType().equals("KING")) {
             if (currentPlayer.equals("WHITE")) {
                 whiteKingMoved = true;
+                // 캐슬링: 킹이 두 칸 움직이면 룩도 같이 움직임
+                if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(1, 0))) { // 킹사이드 캐슬링
+                    ChessPiece rook = board.remove(new Position(0, 0));
+                    rook.setPosition(new Position(2, 0));
+                    board.put(new Position(2, 0), rook);
+                } else if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(5, 0))) { // 퀸사이드 캐슬링
+                    ChessPiece rook = board.remove(new Position(7, 0));
+                    rook.setPosition(new Position(4, 0));
+                    board.put(new Position(4, 0), rook);
+                }
             } else {
                 blackKingMoved = true;
+                // 캐슬링: 킹이 두 칸 움직이면 룩도 같이 움직임
+                if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(1, 7))) { // 킹사이드 캐슬링
+                    ChessPiece rook = board.remove(new Position(0, 7));
+                    rook.setPosition(new Position(2, 7));
+                    board.put(new Position(2, 7), rook);
+                } else if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(5, 7))) { // 퀸사이드 캐슬링
+                    ChessPiece rook = board.remove(new Position(7, 7));
+                    rook.setPosition(new Position(4, 7));
+                    board.put(new Position(4, 7), rook);
+                }
             }
-        } else if (piece.getType().equals("ROOK")) {
+        }
+
+        // ROOK 이동에 따른 캐슬링 불가 처리
+        else if (piece.getType().equals("ROOK")) {
             if (currentPlayer.equals("WHITE")) {
                 if (move.getFrom().equals(new Position(0, 0))) whiteRook1Moved = true;
                 if (move.getFrom().equals(new Position(7, 0))) whiteRook2Moved = true;
@@ -194,16 +220,24 @@ public class GameState {
                 if (move.getFrom().equals(new Position(0, 7))) blackRook1Moved = true;
                 if (move.getFrom().equals(new Position(7, 7))) blackRook2Moved = true;
             }
-        } else if (piece.getType().equals("PAWN")) {
+        }
+
+        // PAWN 이동에 따른 앙파상 처리 및 프로모션 처리
+        else if (piece.getType().equals("PAWN")) {
+            // 앙파상 타겟 설정
             if (Math.abs(move.getFrom().getY() - move.getTo().getY()) == 2) {
                 enPassantTarget = new Position(move.getTo().getX(), (move.getFrom().getY() + move.getTo().getY()) / 2);
             } else {
                 enPassantTarget = null;
             }
+
+            // 앙파상으로 상대 폰 잡기
             if (move.getTo().equals(enPassantTarget)) {
                 Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
                 board.remove(capturePosition);
             }
+
+            // 프로모션 처리 (디폴트로 퀸으로 프로모션)
             if ((move.getTo().getY() == 7 && piece.getColor().equals("WHITE")) || (move.getTo().getY() == 0 && piece.getColor().equals("BLACK"))) {
                 piece.setType("QUEEN");
             }
