@@ -167,19 +167,26 @@ public class GameState {
         // 원래 위치에서 기물을 제거합니다.
         board.remove(move.getFrom());
 
-        // 새로운 위치에 기물을 배치합니다.
-        board.put(move.getTo(), piece);
-
-        log.info("piece = {}, {}, {}, {}", piece.getPosition().getX(), piece.getPosition().getY(), piece.getType(), piece.getColor());
-
         // 기물 잡기 처리
         if (board.containsKey(move.getTo()) && board.get(move.getTo()) != piece) {
             board.remove(move.getTo());
         }
 
+        // 앙파상으로 상대 폰을 잡은 경우, 해당 폰을 제거합니다.
+        if (piece.getType().equals("PAWN") && move.getTo().equals(enPassantTarget)) {
+            Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
+            board.remove(capturePosition);  // 앙파상으로 잡힌 폰을 제거
+        }
+
+        // 새로운 위치에 기물을 배치합니다.
+        board.put(move.getTo(), piece);
+
+        log.info("piece = {}, {}, {}, {}", piece.getPosition().getX(), piece.getPosition().getY(), piece.getType(), piece.getColor());
+
         // 특수 이동 처리 (캐슬링, 앙파상, 프로모션 등)
         handleSpecialMoves(move, piece);
     }
+
 
     private void handleSpecialMoves(Move move, ChessPiece piece) {
         // KING 이동에 따른 캐슬링 불가 처리 및 캐슬링 이동 처리
