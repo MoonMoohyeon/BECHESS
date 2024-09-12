@@ -16,13 +16,13 @@ public class Move {
     @JsonDeserialize(using = PositionDeserializer.class)
     private Position to;
 
-    private Player player;
+    private String color;
 
-    public Move(String eventTime, Position from, Position to, Player player) {
+    public Move(String eventTime, Position from, Position to, String color) {
         this.eventTime = eventTime;
         this.from = from;
         this.to = to;
-        this.player = player;
+        this.color = color;
     }
 
     public Move(Position from, Position to) {

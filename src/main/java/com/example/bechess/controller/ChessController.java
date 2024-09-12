@@ -1,6 +1,5 @@
 package com.example.bechess.controller;
 
-import com.example.bechess.dto.Player;
 import com.example.bechess.dto.Position;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -64,8 +63,8 @@ public class ChessController {
 
     @MessageMapping("/moveWEB")
     public void handleMoveWEB(@Payload Map<String, Object> move) {
-        log.info("Move received: eventTime={}, from={}, to={}, player={}",
-                move.get("eventTime"), move.get("from"), move.get("to"), move.get("player"));
+        log.info("Move received: eventTime={}, from={}, to={}, color={}",
+                move.get("eventTime"), move.get("from"), move.get("to"), move.get("color"));
 
         try {
             // Extract values from the map and cast to appropriate types
@@ -80,11 +79,10 @@ public class ChessController {
             Position to = objectMapper.readValue(toJson, Position.class);
 
             // Extract and convert 'player' information
-            String playerJson = objectMapper.writeValueAsString(move.get("player"));
-            Player player = objectMapper.readValue(playerJson, Player.class);
+            String color = (String) move.get("color");
 
             // Create Move object
-            Move moveObj = new Move(eventTime, from, to, player);
+            Move moveObj = new Move(eventTime, from, to, color);
 
             // Log the created Move object for verification
             log.info("Move object created: {}", moveObj);
@@ -95,7 +93,7 @@ public class ChessController {
                 messagingTemplate.convertAndSend("/topic/message", "invalidMove");
             }
             else {
-                getGameState();
+                getGameState(moveObj);
             }
 
         } catch (Exception e) {
@@ -105,8 +103,8 @@ public class ChessController {
 
     @MessageMapping("/moveVR")
     public void handleMoveVR(@Payload Map<String, Object> move) {
-        log.info("Move received: eventTime={}, from={}, to={}, player={}",
-                move.get("eventTime"), move.get("from"), move.get("to"), move.get("player"));
+        log.info("Move received: eventTime={}, from={}, to={}, color={}",
+                move.get("eventTime"), move.get("from"), move.get("to"), move.get("color"));
 
         try {
             // Extract values from the map and cast to appropriate types
@@ -121,11 +119,10 @@ public class ChessController {
             Position to = objectMapper.readValue(toJson, Position.class);
 
             // Extract and convert 'player' information
-            String playerJson = objectMapper.writeValueAsString(move.get("player"));
-            Player player = objectMapper.readValue(playerJson, Player.class);
+            String color = (String) (move.get("color"));
 
             // Create Move object
-            Move moveObj = new Move(eventTime, from, to, player);
+            Move moveObj = new Move(eventTime, from, to, color);
 
             // Log the created Move object for verification
             log.info("Move object created: {}", moveObj);
@@ -136,7 +133,7 @@ public class ChessController {
                 messagingTemplate.convertAndSend("/topic/message", "invalidMove");
             }
             else {
-                getGameState();
+                getGameState(moveObj);
             }
 
         } catch (Exception e) {
@@ -145,8 +142,9 @@ public class ChessController {
     }
 
     @GetMapping("/state")
-    public GameState getGameState() {
-        messagingTemplate.convertAndSend("/topic/message", "validMove\n" + gameState.getBoardState());
+    public GameState getGameState(Move moveObj) {
+        messagingTemplate.convertAndSend("/topic/message", "validMove\n" + moveObj.getFrom().getX()
+                + moveObj.getFrom().getY() + moveObj.getTo().getX() + moveObj.getTo().getY() + moveObj.getColor() + "\n" + gameState.getBoardState());
         return gameState;
     }
 
