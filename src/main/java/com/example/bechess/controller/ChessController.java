@@ -81,8 +81,11 @@ public class ChessController {
             // Extract and convert 'player' information
             String color = (String) move.get("color");
 
+            // Extract and convert 'type' information
+            String type = (String) move.get("type");
+
             // Create Move object
-            Move moveObj = new Move(eventTime, from, to, color);
+            Move moveObj = new Move(eventTime, from, to, color, type);
 
             // Log the created Move object for verification
             log.info("Move object created: {}", moveObj);
@@ -121,8 +124,11 @@ public class ChessController {
             // Extract and convert 'player' information
             String color = (String) (move.get("color"));
 
+            // Extract and convert 'type' information
+            String type = (String) move.get("type");
+
             // Create Move object
-            Move moveObj = new Move(eventTime, from, to, color);
+            Move moveObj = new Move(eventTime, from, to, color, type);
 
             // Log the created Move object for verification
             log.info("Move object created: {}", moveObj);
@@ -143,8 +149,10 @@ public class ChessController {
 
     @GetMapping("/state")
     public GameState getGameState(Move moveObj) {
-        messagingTemplate.convertAndSend("/topic/message", "validMove\n" + moveObj.getFrom().getX()
-                + moveObj.getFrom().getY() + moveObj.getTo().getX() + moveObj.getTo().getY() + moveObj.getColor() + "\n" + gameState.getBoardState());
+        messagingTemplate.convertAndSend("/topic/message", "validMove\n" +
+                "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
+                " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
+                " color : " + moveObj.getColor() + " type : " + moveObj.getType() + "\n" + gameState.getBoardState());
         return gameState;
     }
 

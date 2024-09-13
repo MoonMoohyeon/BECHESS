@@ -251,6 +251,132 @@ public class GameState {
         }
     }
 
+    private Position VRcoordinate(int x, int y) {
+        int rx = 0, ry = 0;
+
+        // y 좌표에 대한 switch
+        switch((y + 3500) / 1000) {
+            case 0:
+                ry = 0;
+                break;
+            case 1:
+                ry = 1;
+                break;
+            case 2:
+                ry = 2;
+                break;
+            case 3:
+                ry = 3;
+                break;
+            case 4:
+                ry = 4;
+                break;
+            case 5:
+                ry = 5;
+                break;
+            case 6:
+                ry = 6;
+                break;
+            case 7:
+                ry = 7;
+                break;
+        }
+
+        // x 좌표에 대한 switch
+        switch((x + 5500) / 1000) {
+            case 0:
+                rx = 7;
+                break;
+            case 1:
+                rx = 6;
+                break;
+            case 2:
+                rx = 5;
+                break;
+            case 3:
+                rx = 4;
+                break;
+            case 4:
+                rx = 3;
+                break;
+            case 5:
+                rx = 2;
+                break;
+            case 6:
+                rx = 1;
+                break;
+            case 7:
+                rx = 0;
+                break;
+        }
+
+        return new Position(rx, ry);
+    }
+
+    private int[] reverseVRcoordinate(Position pos) {
+        int x = 0, y = 0;
+        int rx = pos.getX();
+        int ry = pos.getY();
+
+        // ry에 대한 switch
+        switch (ry) {
+            case 0:
+                y = -3000; // 범위는 -3500 ~ -2500이므로 중간 값으로 설정
+                break;
+            case 1:
+                y = -2000; // 범위는 -2500 ~ -1500
+                break;
+            case 2:
+                y = -1000; // 범위는 -1500 ~ -500
+                break;
+            case 3:
+                y = 0;     // 범위는 -500 ~ 500
+                break;
+            case 4:
+                y = 1000;  // 범위는 500 ~ 1500
+                break;
+            case 5:
+                y = 2000;  // 범위는 1500 ~ 2500
+                break;
+            case 6:
+                y = 3000;  // 범위는 2500 ~ 3500
+                break;
+            case 7:
+                y = 4000;  // 범위는 3500 ~ 4500
+                break;
+        }
+
+        // rx에 대한 switch
+        switch (rx) {
+            case 0:
+                x = 2000;  // 범위는 1500 ~ 2500
+                break;
+            case 1:
+                x = 1000;  // 범위는 500 ~ 1500
+                break;
+            case 2:
+                x = 0;     // 범위는 -500 ~ 500
+                break;
+            case 3:
+                x = -1000; // 범위는 -1500 ~ -500
+                break;
+            case 4:
+                x = -2000; // 범위는 -2500 ~ -1500
+                break;
+            case 5:
+                x = -3000; // 범위는 -3500 ~ -2500
+                break;
+            case 6:
+                x = -4000; // 범위는 -4500 ~ -3500
+                break;
+            case 7:
+                x = -5000; // 범위는 -5500 ~ -4500
+                break;
+        }
+
+        return new int[] {x, y};
+    }
+
 
     public void initializeBoard() {
         // Initialize white pieces
