@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.example.bechess.dto.Move;
-import com.example.bechess.service.ChessPiece;
 import com.example.bechess.service.GameState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -13,15 +12,14 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import org.springframework.context.event.EventListener;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Controller
 public class ChessController {
@@ -31,6 +29,9 @@ public class ChessController {
 
     private static final Logger log = LoggerFactory.getLogger(ChessController.class);
 
+    private String WebSessionID1 = null;
+    private String WebSessionID2 = null;
+
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
     @Autowired
@@ -39,20 +40,65 @@ public class ChessController {
     @MessageMapping("/join")
     public void join(SimpMessageHeaderAccessor headerAccessor) throws IOException {
         String sessionId = headerAccessor.getSessionId();
-        if (sessionId != null) {
+        if (connectedSessions.size() > 1) {
+            log.info("세션 거부됨.");
+        } else if (sessionId != null) {
             connectedSessions.add(sessionId);
             log.info("세션 [ {} ] 연결됨", sessionId);
-            broadcastConnectedMessage(sessionId);
 
+            if (WebSessionID1 == null) {
+                WebSessionID1 = sessionId;
+            } else if (WebSessionID2 == null) {
+                WebSessionID2 = sessionId;
+            }
+
+            // 다른 사용자에게 게임 시작 알림 전송
             if (connectedSessions.size() > 1) {
+                broadcastConnectedMessage(WebSessionID1);
+                broadcastConnectedMessage(WebSessionID2);
+                Random random = new Random();
+                boolean assignW = random.nextBoolean();
+                String color1 = assignW ? "w" : "b";
+                sendMessageToSpecificSession(WebSessionID1, "color : " + color1);
+                String color2 = color1.equals("w") ? "b" : "w";
+                sendMessageToSpecificSession(WebSessionID2, "color : " + color2);
+                messagingTemplate.convertAndSend("/topic/message", WebSessionID1 + "color : " + color1);
+                messagingTemplate.convertAndSend("/topic/message", WebSessionID2 + "color : " + color2);
+                messagingTemplate.convertAndSendToUser(WebSessionID1, "/topic/message", "color : " + color1);
+                messagingTemplate.convertAndSendToUser(WebSessionID2, "/topic/message", "color : " + color2);
                 messagingTemplate.convertAndSend("/topic/message", "gameStart");
             }
         }
     }
 
-    private void broadcastConnectedMessage(String sessionId) {
-        messagingTemplate.convertAndSend("/topic/message", "세션 [ " + sessionId + " ] 연결되었습니다.");
+    @EventListener
+    public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
+        StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
+        String sessionId = headerAccessor.getSessionId();
+
+        if (sessionId.equals(WebSessionID1)) {
+            log.info("WebSessionID1 [ {} ] disconnected", sessionId);
+            WebSessionID1 = null;  // 세션이 끊어졌으므로 초기화
+        } else if (sessionId.equals(WebSessionID2)) {
+            log.info("WebSessionID2 [ {} ] disconnected", sessionId);
+            WebSessionID2 = null;  // 세션이 끊어졌으므로 초기화
+        }
+
+        // 세션 연결 목록에서 제거
+        connectedSessions.remove(sessionId);
+
+        // 필요 시 다른 사용자에게 알림
+        messagingTemplate.convertAndSend("/topic/message", "Session [ " + sessionId + " ] disconnected");
     }
+
+    private void broadcastConnectedMessage(String sessionId) {
+        messagingTemplate.convertAndSend("/topic/message", "sessionId\n" + sessionId + "\n");
+    }
+
+    private void sendMessageToSpecificSession(String sessionId, String message) {
+        messagingTemplate.convertAndSendToUser(sessionId, "/queue/reply", message);
+    }
+
 
     @MessageMapping("/timeUp") // 클라이언트에서 /app/timeUp로 메시지를 보내면 처리
     @SendTo("/topic/timeUp") // 서버에서 /topic/timeUp로 메시지를 전송
