@@ -15,7 +15,6 @@ public class GameState {
     private static final Logger log = LoggerFactory.getLogger(GameState.class);
     private Map<Position, ChessPiece> board = new HashMap<>();
     private String currentPlayer = "WHITE";
-    private String currentTeam;
     private String currentRole; // COMMANDER or ACTOR
     private boolean whiteKingMoved = false;
     private boolean blackKingMoved = false;
@@ -27,7 +26,6 @@ public class GameState {
 
     public GameState() {
         this.board = new HashMap<>();
-        this.currentTeam = "A";
         this.currentRole = "COMMANDER";
          initializeBoard();
     }
@@ -39,7 +37,7 @@ public class GameState {
             updateBoard(move);
             switchPlayer();
             switchTurn();
-            log.info("현재 정보 : ", getCurrentPlayer(), getCurrentTeam(), getCurrentRole());
+            log.info("현재 정보 : ", getCurrentPlayer(), getCurrentRole());
             printBoard();
             return true;
         }
@@ -55,7 +53,7 @@ public class GameState {
             updateBoard(move);
             switchPlayer();
             switchTurn();
-            log.info("현재 정보 : ", getCurrentPlayer(), getCurrentTeam(), getCurrentRole());
+            log.info("현재 정보 : ", getCurrentPlayer(), getCurrentRole());
             printBoard();
             return true;
         }
@@ -87,7 +85,6 @@ public class GameState {
         }
     }
 
-
     public String getBoardState() {
         StringBuilder boardStringBuilder = new StringBuilder();
 
@@ -115,7 +112,6 @@ public class GameState {
         return boardStringBuilder.toString();
     }
 
-
     private char getPieceSymbol(ChessPiece piece) {
         switch (piece.getType()) {
             case "PAWN": return 'P';
@@ -128,7 +124,6 @@ public class GameState {
         }
     }
 
-
     public void switchPlayer() {
         currentPlayer = currentPlayer.equals("WHITE") ? "BLACK" : "WHITE";
     }
@@ -138,19 +133,258 @@ public class GameState {
             currentRole = "ACTOR";
         } else {
             currentRole = "COMMANDER";
-            currentTeam = currentTeam.equals("A") ? "B" : "A";
         }
     }
 
     public boolean isValidMove(Move move) {
         Position from = move.getFrom();
-        log.info("pos = {}, {}", from.getX(), from.getY());
+        Position to = move.getTo();
         ChessPiece piece = board.get(from);
-        log.info("piece : {}, {}, player : {}", piece.getType(), piece.getColor(), currentPlayer);
+
         if (piece == null || !piece.getColor().equals(currentPlayer)) {
-            return false;
+            return false; // 기물이 없거나 상대 기물인 경우
         }
-        return piece.isValidMove(move, board, this);
+
+        switch (piece.getType()) {
+            case "PAWN":
+                return isValidPawnMove(move);
+            case "ROOK":
+                return isValidRookMove(move);
+            case "KNIGHT":
+                return isValidKnightMove(move);
+            case "BISHOP":
+                return isValidBishopMove(move);
+            case "QUEEN":
+                return isValidQueenMove(move);
+            case "KING":
+                return isValidKingMove(move, board); // 이미 리팩토링된 메서드 사용
+            default:
+                return false;
+        }
+    }
+
+    // 폰의 유효한 이동 체크
+    public boolean isValidPawnMove(Move move) {
+        Position from = move.getFrom();
+        Position to = move.getTo();
+        ChessPiece piece = board.get(from);
+
+        int dx = Math.abs(to.getX() - from.getX());
+        int dy = to.getY() - from.getY();
+        int direction = piece.getColor().equals("WHITE") ? 1 : -1;
+
+        // 일반 이동
+        if (dx == 0 && dy == direction && !board.containsKey(to)) {
+            return true;
+        }
+
+        // 첫 이동 시 두 칸 전진
+        if (dx == 0 && dy == 2 * direction && from.getY() == (piece.getColor().equals("WHITE") ? 1 : 6) && !board.containsKey(to)) {
+            return isPathClear(from, to, board);
+        }
+
+        // 대각선 공격
+        if (dx == 1 && dy == direction && board.containsKey(to) && !board.get(to).getColor().equals(piece.getColor())) {
+            return true;
+        }
+
+        return false;
+    }
+
+    // 룩의 유효한 이동 체크
+    public boolean isValidRookMove(Move move) {
+        Position from = move.getFrom();
+        Position to = move.getTo();
+
+        if (from.getX() == to.getX() || from.getY() == to.getY()) {
+            return isPathClear(from, to, board);
+        }
+        return false;
+    }
+
+    // 나이트의 유효한 이동 체크
+    public boolean isValidKnightMove(Move move) {
+        Position from = move.getFrom();
+        Position to = move.getTo();
+        int dx = Math.abs(to.getX() - from.getX());
+        int dy = Math.abs(to.getY() - from.getY());
+
+        return (dx == 2 && dy == 1) || (dx == 1 && dy == 2);
+    }
+
+    // 비숍의 유효한 이동 체크
+    public boolean isValidBishopMove(Move move) {
+        Position from = move.getFrom();
+        Position to = move.getTo();
+        int dx = Math.abs(to.getX() - from.getX());
+        int dy = Math.abs(to.getY() - from.getY());
+
+        return dx == dy && isPathClear(from, to, board);
+    }
+
+    // 퀸의 유효한 이동 체크
+    public boolean isValidQueenMove(Move move) {
+        Position from = move.getFrom();
+        Position to = move.getTo();
+
+        int dx = Math.abs(to.getX() - from.getX());
+        int dy = Math.abs(to.getY() - from.getY());
+
+        return (dx == dy || from.getX() == to.getX() || from.getY() == to.getY()) && isPathClear(from, to, board);
+    }
+
+    public boolean isValidKingMove(Move move, Map<Position, ChessPiece> board) {
+        Position from = move.getFrom();
+        Position to = move.getTo();
+        int dx = Math.abs(to.getX() - from.getX());
+        int dy = Math.abs(to.getY() - from.getY());
+
+        // Normal king move (one square in any direction)
+        if (dx <= 1 && dy <= 1) {
+            return !isPositionUnderAttack(to, board);  // 새로운 위치가 공격받지 않는지 확인
+        }
+
+        // Castling
+        if (dx == 2 && dy == 0) {
+            if (getCurrentPlayer().equals("WHITE") && !whiteKingMoved &&
+                    ((to.getX() == 5 && !whiteRook2Moved && isPathClear(from, new Position(7, 0), board) && !isInCheckOrThroughCheck(from, new Position(6, 0), board)) ||
+                            (to.getX() == 1 && !whiteRook1Moved && isPathClear(from, new Position(0, 0), board) && !isInCheckOrThroughCheck(from, new Position(2, 0), board)))) {
+                return true;
+            }
+            if (getCurrentPlayer().equals("BLACK") && !blackKingMoved &&
+                    ((to.getX() == 5 && !blackRook2Moved && isPathClear(from, new Position(7, 7), board) && !isInCheckOrThroughCheck(from, new Position(6, 7), board)) ||
+                            (to.getX() == 1 && !blackRook1Moved && isPathClear(from, new Position(0, 7), board) && !isInCheckOrThroughCheck(from, new Position(2, 7), board)))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isPositionUnderAttack(Position position, Map<Position, ChessPiece> board) {
+        for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
+            ChessPiece piece = entry.getValue();
+
+            // Only consider the opponent's pieces
+            if (!piece.getColor().equals(getCurrentPlayer())) {
+                Move potentialMove = new Move(entry.getKey(), position);
+                if (piece.isValidMove(potentialMove, board, this)) {
+                    return true; // The position is under attack by an opponent's piece
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isInCheckOrThroughCheck(Position from, Position to, Map<Position, ChessPiece> board) {
+        // Check the final position first (to)
+        if (isPositionUnderAttack(to, board)) {
+            return true;
+        }
+
+        // For castling, check if any position between `from` and `to` is under attack
+        if (Math.abs(to.getX() - from.getX()) == 2) { // Castling case
+            int step = (to.getX() - from.getX()) / 2; // Direction of castling
+            Position midPosition = new Position(from.getX() + step, from.getY());
+
+            // Check if the intermediate position is under attack
+            if (isPositionUnderAttack(midPosition, board)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // 경로가 비어있는지 확인하는 헬퍼 메서드
+    private boolean isPathClear(Position from, Position to, Map<Position, ChessPiece> board) {
+        int xDirection = Integer.compare(to.getX(), from.getX());
+        int yDirection = Integer.compare(to.getY(), from.getY());
+
+        int x = from.getX() + xDirection;
+        int y = from.getY() + yDirection;
+
+        while (x != to.getX() || y != to.getY()) {
+            Position intermediate = new Position(x, y);
+            if (board.containsKey(intermediate)) {
+                return false;
+            }
+            x += xDirection;
+            y += yDirection;
+        }
+        return true;
+    }
+
+    public boolean isCheckmate() {
+        // 현재 플레이어의 킹의 위치를 찾음
+        Position kingPosition = findKingPosition(currentPlayer);
+
+        // 킹이 체크 상태인지 확인
+        if (!isPositionUnderAttack(kingPosition, board)) {
+            return false;  // 킹이 체크 상태가 아니라면 체크메이트가 아님
+        }
+
+        // 킹을 체크 상태에서 벗어날 수 있는지 확인
+        if (canKingEscapeCheck(kingPosition)) {
+            return false;  // 킹이 체크 상태에서 벗어날 수 있다면 체크메이트가 아님
+        }
+
+        // 다른 기물이 체크를 막을 수 있는지 확인
+        if (canBlockOrCaptureAttacker(kingPosition)) {
+            return false;  // 공격자를 제거하거나 막을 수 있다면 체크메이트가 아님
+        }
+
+        // 위의 방법들로 체크를 피할 수 없다면 체크메이트
+        return true;
+    }
+
+    // 킹의 위치 찾기
+    private Position findKingPosition(String color) {
+        for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
+            ChessPiece piece = entry.getValue();
+            if (piece.getType().equals("KING") && piece.getColor().equals(color)) {
+                return entry.getKey();
+            }
+        }
+        throw new IllegalStateException("킹이 존재하지 않습니다.");  // 킹이 반드시 존재해야 함
+    }
+
+    // 킹이 체크 상태에서 벗어날 수 있는지 확인 (킹이 이동할 수 있는 모든 위치를 확인)
+    private boolean canKingEscapeCheck(Position kingPosition) {
+        ChessPiece king = board.get(kingPosition);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) continue;  // 제자리 움직임 무시
+                Position newPosition = new Position(kingPosition.getX() + dx, kingPosition.getY() + dy);
+                if (isValidKingMove(new Move(kingPosition, newPosition), board) && !isPositionUnderAttack(newPosition, board)) {
+                    return true;  // 킹이 체크 상태에서 벗어날 수 있다면 true 반환
+                }
+            }
+        }
+        return false;  // 킹이 체크 상태에서 벗어날 수 없다면 false 반환
+    }
+
+    // 다른 기물이 공격자를 막거나 제거할 수 있는지 확인
+    private boolean canBlockOrCaptureAttacker(Position kingPosition) {
+        // 상대방 기물이 킹을 공격하고 있는지 확인
+        for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
+            ChessPiece attacker = entry.getValue();
+            if (!attacker.getColor().equals(currentPlayer)) {  // 공격자는 상대방 기물이어야 함
+                Move potentialMove = new Move(entry.getKey(), kingPosition);
+                if (attacker.isValidMove(potentialMove, board, this)) {
+                    // 공격자를 제거하거나 경로를 막을 수 있는지 확인
+                    for (Map.Entry<Position, ChessPiece> defenderEntry : board.entrySet()) {
+                        ChessPiece defender = defenderEntry.getValue();
+                        if (defender.getColor().equals(currentPlayer)) {  // 방어자는 현재 플레이어의 기물이어야 함
+                            Move blockOrCaptureMove = new Move(defenderEntry.getKey(), attacker.getPosition());
+                            if (defender.isValidMove(blockOrCaptureMove, board, this)) {
+                                return true;  // 공격자를 제거하거나 막을 수 있으면 true 반환
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;  // 공격자를 막거나 제거할 수 없다면 false 반환
     }
 
     public void updateBoard(Move move) {

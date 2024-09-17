@@ -64,8 +64,6 @@ public class ChessController {
                 sendMessageToSpecificSession(WebSessionID2, "color : " + color2);
                 messagingTemplate.convertAndSend("/topic/message", WebSessionID1 + "color : " + color1);
                 messagingTemplate.convertAndSend("/topic/message", WebSessionID2 + "color : " + color2);
-                messagingTemplate.convertAndSendToUser(WebSessionID1, "/topic/message", "color : " + color1);
-                messagingTemplate.convertAndSendToUser(WebSessionID2, "/topic/message", "color : " + color2);
                 messagingTemplate.convertAndSend("/topic/message", "gameStart");
             }
         }
@@ -96,15 +94,16 @@ public class ChessController {
     }
 
     private void sendMessageToSpecificSession(String sessionId, String message) {
-        messagingTemplate.convertAndSendToUser(sessionId, "/queue/reply", message);
+        messagingTemplate.convertAndSendToUser(sessionId, "/topic/message", message);
     }
 
 
     @MessageMapping("/timeUp") // 클라이언트에서 /app/timeUp로 메시지를 보내면 처리
-    @SendTo("/topic/timeUp") // 서버에서 /topic/timeUp로 메시지를 전송
     public String handleTimeUp(String message) {
         System.out.println("Received time up message: " + message);
-        return "Time is up!";
+        messagingTemplate.convertAndSend("/topic/message", message);
+        messagingTemplate.convertAndSend("/topic/VR", message);
+        return message;
     }
 
     @MessageMapping("/moveWEB")
@@ -182,7 +181,7 @@ public class ChessController {
 
             if(!gameState.processMoveVR(moveObj)) {
                 log.info("invalidMove");
-                messagingTemplate.convertAndSend("/topic/message", "invalidMove");
+                messagingTemplate.convertAndSend("/topic/VR", "invalidMove");
             }
             else {
                 getGameState(moveObj);
