@@ -371,7 +371,6 @@ public class GameState {
 
     // 킹이 체크 상태에서 벗어날 수 있는지 확인 (킹이 이동할 수 있는 모든 위치를 확인)
     private boolean canKingEscapeCheck(Position kingPosition) {
-        ChessPiece king = board.get(kingPosition);
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 if (dx == 0 && dy == 0) continue;  // 제자리 움직임 무시
@@ -445,63 +444,65 @@ public class GameState {
 
     private void handleSpecialMoves(Move move, ChessPiece piece) {
         // KING 이동에 따른 캐슬링 불가 처리 및 캐슬링 이동 처리
-        if (piece.getType().equals("KING")) {
-            if (currentPlayer.equals("WHITE")) {
-                whiteKingMoved = true;
-                // 캐슬링: 킹이 두 칸 움직이면 룩도 같이 움직임
-                if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(1, 0))) { // 킹사이드 캐슬링
-                    ChessPiece rook = board.remove(new Position(0, 0));
-                    rook.setPosition(new Position(2, 0));
-                    board.put(new Position(2, 0), rook);
-                } else if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(5, 0))) { // 퀸사이드 캐슬링
-                    ChessPiece rook = board.remove(new Position(7, 0));
-                    rook.setPosition(new Position(4, 0));
-                    board.put(new Position(4, 0), rook);
+        switch (piece.getType()) {
+            case "KING" -> {
+                if (currentPlayer.equals("WHITE")) {
+                    whiteKingMoved = true;
+                    // 캐슬링: 킹이 두 칸 움직이면 룩도 같이 움직임
+                    if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(1, 0))) { // 킹사이드 캐슬링
+                        ChessPiece rook = board.remove(new Position(0, 0));
+                        rook.setPosition(new Position(2, 0));
+                        board.put(new Position(2, 0), rook);
+                    } else if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(5, 0))) { // 퀸사이드 캐슬링
+                        ChessPiece rook = board.remove(new Position(7, 0));
+                        rook.setPosition(new Position(4, 0));
+                        board.put(new Position(4, 0), rook);
+                    }
+                } else {
+                    blackKingMoved = true;
+                    // 캐슬링: 킹이 두 칸 움직이면 룩도 같이 움직임
+                    if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(1, 7))) { // 킹사이드 캐슬링
+                        ChessPiece rook = board.remove(new Position(0, 7));
+                        rook.setPosition(new Position(2, 7));
+                        board.put(new Position(2, 7), rook);
+                    } else if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(5, 7))) { // 퀸사이드 캐슬링
+                        ChessPiece rook = board.remove(new Position(7, 7));
+                        rook.setPosition(new Position(4, 7));
+                        board.put(new Position(4, 7), rook);
+                    }
                 }
-            } else {
-                blackKingMoved = true;
-                // 캐슬링: 킹이 두 칸 움직이면 룩도 같이 움직임
-                if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(1, 7))) { // 킹사이드 캐슬링
-                    ChessPiece rook = board.remove(new Position(0, 7));
-                    rook.setPosition(new Position(2, 7));
-                    board.put(new Position(2, 7), rook);
-                } else if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(5, 7))) { // 퀸사이드 캐슬링
-                    ChessPiece rook = board.remove(new Position(7, 7));
-                    rook.setPosition(new Position(4, 7));
-                    board.put(new Position(4, 7), rook);
+            }
+
+            // ROOK 이동에 따른 캐슬링 불가 처리
+            case "ROOK" -> {
+                if (currentPlayer.equals("WHITE")) {
+                    if (move.getFrom().equals(new Position(0, 0))) whiteRook1Moved = true;
+                    if (move.getFrom().equals(new Position(7, 0))) whiteRook2Moved = true;
+                } else {
+                    if (move.getFrom().equals(new Position(0, 7))) blackRook1Moved = true;
+                    if (move.getFrom().equals(new Position(7, 7))) blackRook2Moved = true;
                 }
             }
-        }
 
-        // ROOK 이동에 따른 캐슬링 불가 처리
-        else if (piece.getType().equals("ROOK")) {
-            if (currentPlayer.equals("WHITE")) {
-                if (move.getFrom().equals(new Position(0, 0))) whiteRook1Moved = true;
-                if (move.getFrom().equals(new Position(7, 0))) whiteRook2Moved = true;
-            } else {
-                if (move.getFrom().equals(new Position(0, 7))) blackRook1Moved = true;
-                if (move.getFrom().equals(new Position(7, 7))) blackRook2Moved = true;
-            }
-        }
+            // PAWN 이동에 따른 앙파상 처리 및 프로모션 처리
+            case "PAWN" -> {
+                // 앙파상 타겟 설정
+                if (Math.abs(move.getFrom().getY() - move.getTo().getY()) == 2) {
+                    enPassantTarget = new Position(move.getTo().getX(), (move.getFrom().getY() + move.getTo().getY()) / 2);
+                } else {
+                    enPassantTarget = null;
+                }
 
-        // PAWN 이동에 따른 앙파상 처리 및 프로모션 처리
-        else if (piece.getType().equals("PAWN")) {
-            // 앙파상 타겟 설정
-            if (Math.abs(move.getFrom().getY() - move.getTo().getY()) == 2) {
-                enPassantTarget = new Position(move.getTo().getX(), (move.getFrom().getY() + move.getTo().getY()) / 2);
-            } else {
-                enPassantTarget = null;
-            }
+                // 앙파상으로 상대 폰 잡기
+                if (move.getTo().equals(enPassantTarget)) {
+                    Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
+                    board.remove(capturePosition);
+                }
 
-            // 앙파상으로 상대 폰 잡기
-            if (move.getTo().equals(enPassantTarget)) {
-                Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
-                board.remove(capturePosition);
-            }
-
-            // 프로모션 처리 (디폴트로 퀸으로 프로모션)
-            if ((move.getTo().getY() == 7 && piece.getColor().equals("WHITE")) || (move.getTo().getY() == 0 && piece.getColor().equals("BLACK"))) {
-                piece.setType("QUEEN");
+                // 프로모션 처리 (디폴트로 퀸으로 프로모션)
+                if ((move.getTo().getY() == 7 && piece.getColor().equals("WHITE")) || (move.getTo().getY() == 0 && piece.getColor().equals("BLACK"))) {
+                    piece.setType("QUEEN");
+                }
             }
         }
     }
@@ -510,59 +511,27 @@ public class GameState {
         int rx = 0, ry = 0;
 
         // y 좌표에 대한 switch
-        switch((y + 3500) / 1000) {
-            case 0:
-                ry = 0;
-                break;
-            case 1:
-                ry = 1;
-                break;
-            case 2:
-                ry = 2;
-                break;
-            case 3:
-                ry = 3;
-                break;
-            case 4:
-                ry = 4;
-                break;
-            case 5:
-                ry = 5;
-                break;
-            case 6:
-                ry = 6;
-                break;
-            case 7:
-                ry = 7;
-                break;
+        switch ((y + 3500) / 1000) {
+            case 0 -> ry = 0;
+            case 1 -> ry = 1;
+            case 2 -> ry = 2;
+            case 3 -> ry = 3;
+            case 4 -> ry = 4;
+            case 5 -> ry = 5;
+            case 6 -> ry = 6;
+            case 7 -> ry = 7;
         }
 
         // x 좌표에 대한 switch
-        switch((x + 5500) / 1000) {
-            case 0:
-                rx = 7;
-                break;
-            case 1:
-                rx = 6;
-                break;
-            case 2:
-                rx = 5;
-                break;
-            case 3:
-                rx = 4;
-                break;
-            case 4:
-                rx = 3;
-                break;
-            case 5:
-                rx = 2;
-                break;
-            case 6:
-                rx = 1;
-                break;
-            case 7:
-                rx = 0;
-                break;
+        switch ((x + 5500) / 1000) {
+            case 0 -> rx = 7;
+            case 1 -> rx = 6;
+            case 2 -> rx = 5;
+            case 3 -> rx = 4;
+            case 4 -> rx = 3;
+            case 5 -> rx = 2;
+            case 6 -> rx = 1;
+            case 7 -> rx = 0;
         }
 
         return new Position(rx, ry);
@@ -575,58 +544,26 @@ public class GameState {
 
         // ry에 대한 switch
         switch (ry) {
-            case 0:
-                y = -3000; // 범위는 -3500 ~ -2500이므로 중간 값으로 설정
-                break;
-            case 1:
-                y = -2000; // 범위는 -2500 ~ -1500
-                break;
-            case 2:
-                y = -1000; // 범위는 -1500 ~ -500
-                break;
-            case 3:
-                y = 0;     // 범위는 -500 ~ 500
-                break;
-            case 4:
-                y = 1000;  // 범위는 500 ~ 1500
-                break;
-            case 5:
-                y = 2000;  // 범위는 1500 ~ 2500
-                break;
-            case 6:
-                y = 3000;  // 범위는 2500 ~ 3500
-                break;
-            case 7:
-                y = 4000;  // 범위는 3500 ~ 4500
-                break;
+            case 0 -> y = -3000; // 범위는 -3500 ~ -2500이므로 중간 값으로 설정
+            case 1 -> y = -2000; // 범위는 -2500 ~ -1500
+            case 2 -> y = -1000; // 범위는 -1500 ~ -500
+            case 3 -> y = 0;     // 범위는 -500 ~ 500
+            case 4 -> y = 1000;  // 범위는 500 ~ 1500
+            case 5 -> y = 2000;  // 범위는 1500 ~ 2500
+            case 6 -> y = 3000;  // 범위는 2500 ~ 3500
+            case 7 -> y = 4000;  // 범위는 3500 ~ 4500
         }
 
         // rx에 대한 switch
         switch (rx) {
-            case 0:
-                x = 2000;  // 범위는 1500 ~ 2500
-                break;
-            case 1:
-                x = 1000;  // 범위는 500 ~ 1500
-                break;
-            case 2:
-                x = 0;     // 범위는 -500 ~ 500
-                break;
-            case 3:
-                x = -1000; // 범위는 -1500 ~ -500
-                break;
-            case 4:
-                x = -2000; // 범위는 -2500 ~ -1500
-                break;
-            case 5:
-                x = -3000; // 범위는 -3500 ~ -2500
-                break;
-            case 6:
-                x = -4000; // 범위는 -4500 ~ -3500
-                break;
-            case 7:
-                x = -5000; // 범위는 -5500 ~ -4500
-                break;
+            case 0 -> x = 2000;  // 범위는 1500 ~ 2500
+            case 1 -> x = 1000;  // 범위는 500 ~ 1500
+            case 2 -> x = 0;     // 범위는 -500 ~ 500
+            case 3 -> x = -1000; // 범위는 -1500 ~ -500
+            case 4 -> x = -2000; // 범위는 -2500 ~ -1500
+            case 5 -> x = -3000; // 범위는 -3500 ~ -2500
+            case 6 -> x = -4000; // 범위는 -4500 ~ -3500
+            case 7 -> x = -5000; // 범위는 -5500 ~ -4500
         }
 
         return new int[] {x, y};
