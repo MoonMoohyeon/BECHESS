@@ -32,8 +32,8 @@ public class GameState {
 
     public boolean processMoveWEB(Move move) {
         printBoard();
-        log.info(String.valueOf(isValidMove(move)));
-        if (isValidMove(move)) {
+        log.info(String.valueOf(isValidMove(move, board)));
+        if (isValidMove(move, board)) {
             updateBoard(move);
             switchPlayer();
             switchTurn();
@@ -48,8 +48,8 @@ public class GameState {
 
     public boolean processMoveVR(Move move) {
         printBoard();
-        log.info(String.valueOf(isValidMove(move)));
-        if (isValidMove(move)) {
+        log.info(String.valueOf(isValidMove(move, board)));
+        if (isValidMove(move, board)) {
             updateBoard(move);
             switchPlayer();
             switchTurn();
@@ -114,13 +114,27 @@ public class GameState {
 
     private char getPieceSymbol(ChessPiece piece) {
         switch (piece.getType()) {
-            case "PAWN": return 'P';
-            case "KNIGHT": return 'N';
-            case "BISHOP": return 'B';
-            case "ROOK": return 'R';
-            case "QUEEN": return 'Q';
-            case "KING": return 'K';
-            default: return '.';
+            case "PAWN" -> {
+                return 'P';
+            }
+            case "KNIGHT" -> {
+                return 'N';
+            }
+            case "BISHOP" -> {
+                return 'B';
+            }
+            case "ROOK" -> {
+                return 'R';
+            }
+            case "QUEEN" -> {
+                return 'Q';
+            }
+            case "KING" -> {
+                return 'K';
+            }
+            default -> {
+                return '.';
+            }
         }
     }
 
@@ -136,7 +150,7 @@ public class GameState {
         }
     }
 
-    public boolean isValidMove(Move move) {
+    public boolean isValidMove(Move move, Map<Position, ChessPiece> board) {
         Position from = move.getFrom();
         Position to = move.getTo();
         ChessPiece piece = board.get(from);
@@ -146,25 +160,32 @@ public class GameState {
         }
 
         switch (piece.getType()) {
-            case "PAWN":
-                return isValidPawnMove(move);
-            case "ROOK":
+            case "PAWN" -> {
+                return isValidPawnMove(move, board);
+            }
+            case "ROOK" -> {
                 return isValidRookMove(move);
-            case "KNIGHT":
+            }
+            case "KNIGHT" -> {
                 return isValidKnightMove(move);
-            case "BISHOP":
+            }
+            case "BISHOP" -> {
                 return isValidBishopMove(move);
-            case "QUEEN":
+            }
+            case "QUEEN" -> {
                 return isValidQueenMove(move);
-            case "KING":
+            }
+            case "KING" -> {
                 return isValidKingMove(move, board); // 이미 리팩토링된 메서드 사용
-            default:
+            }
+            default -> {
                 return false;
+            }
         }
     }
 
     // 폰의 유효한 이동 체크
-    public boolean isValidPawnMove(Move move) {
+    public boolean isValidPawnMove(Move move, Map<Position, ChessPiece> board) {
         Position from = move.getFrom();
         Position to = move.getTo();
         ChessPiece piece = board.get(from);
@@ -267,7 +288,7 @@ public class GameState {
             // Only consider the opponent's pieces
             if (!piece.getColor().equals(getCurrentPlayer())) {
                 Move potentialMove = new Move(entry.getKey(), position);
-                if (piece.isValidMove(potentialMove, board, this)) {
+                if (isValidMove(potentialMove, board)) {
                     return true; // The position is under attack by an opponent's piece
                 }
             }
@@ -370,13 +391,13 @@ public class GameState {
             ChessPiece attacker = entry.getValue();
             if (!attacker.getColor().equals(currentPlayer)) {  // 공격자는 상대방 기물이어야 함
                 Move potentialMove = new Move(entry.getKey(), kingPosition);
-                if (attacker.isValidMove(potentialMove, board, this)) {
+                if (isValidMove(potentialMove, board)) {
                     // 공격자를 제거하거나 경로를 막을 수 있는지 확인
                     for (Map.Entry<Position, ChessPiece> defenderEntry : board.entrySet()) {
                         ChessPiece defender = defenderEntry.getValue();
                         if (defender.getColor().equals(currentPlayer)) {  // 방어자는 현재 플레이어의 기물이어야 함
                             Move blockOrCaptureMove = new Move(defenderEntry.getKey(), attacker.getPosition());
-                            if (defender.isValidMove(blockOrCaptureMove, board, this)) {
+                            if (isValidMove(blockOrCaptureMove, board)) {
                                 return true;  // 공격자를 제거하거나 막을 수 있으면 true 반환
                             }
                         }
