@@ -152,7 +152,6 @@ public class GameState {
 
     public boolean isValidMove(Move move, Map<Position, ChessPiece> board) {
         Position from = move.getFrom();
-        Position to = move.getTo();
         ChessPiece piece = board.get(from);
 
         if (piece == null || !piece.getColor().equals(currentPlayer)) {
@@ -297,7 +296,6 @@ public class GameState {
     }
 
     private boolean isInCheckOrThroughCheck(Position from, Position to, Map<Position, ChessPiece> board) {
-        // Check the final position first (to)
         if (isPositionUnderAttack(to, board)) {
             return true;
         }
@@ -415,6 +413,9 @@ public class GameState {
             return;
         }
 
+        // 특수 이동 처리 (캐슬링, 앙파상, 프로모션 등)
+        handleSpecialMoves(move, piece);
+
         // 기물의 위치를 업데이트합니다.
         piece.setPosition(move.getTo());
 
@@ -436,9 +437,6 @@ public class GameState {
         board.put(move.getTo(), piece);
 
         log.info("piece = {}, {}, {}, {}", piece.getPosition().getX(), piece.getPosition().getY(), piece.getType(), piece.getColor());
-
-        // 특수 이동 처리 (캐슬링, 앙파상, 프로모션 등)
-        handleSpecialMoves(move, piece);
     }
 
 

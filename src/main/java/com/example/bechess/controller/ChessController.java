@@ -59,12 +59,10 @@ public class ChessController {
                 Random random = new Random();
                 boolean assignW = random.nextBoolean();
                 String color1 = assignW ? "w" : "b";
-                sendMessageToSpecificSession(WebSessionID1, "color : " + color1);
                 String color2 = color1.equals("w") ? "b" : "w";
-                sendMessageToSpecificSession(WebSessionID2, "color : " + color2);
-                messagingTemplate.convertAndSend("/topic/message", WebSessionID1 + "color : " + color1);
-                messagingTemplate.convertAndSend("/topic/message", WebSessionID2 + "color : " + color2);
-                messagingTemplate.convertAndSend("/topic/message", "gameStart");
+                messagingTemplate.convertAndSend("/topic/Web", "sessionID : " + WebSessionID1 + " color : " + color1);
+                messagingTemplate.convertAndSend("/topic/Web", "sessionID : " + WebSessionID2 + " color : " + color2);
+                messagingTemplate.convertAndSend("/topic/Web", "gameStart");
             }
         }
     }
@@ -86,22 +84,22 @@ public class ChessController {
         connectedSessions.remove(sessionId);
 
         // 필요 시 다른 사용자에게 알림
-        messagingTemplate.convertAndSend("/topic/message", "Session [ " + sessionId + " ] disconnected");
+        messagingTemplate.convertAndSend("/topic/Web", "Session [ " + sessionId + " ] disconnected");
     }
 
     private void broadcastConnectedMessage(String sessionId) {
-        messagingTemplate.convertAndSend("/topic/message", "sessionId\n" + sessionId + "\n");
+        messagingTemplate.convertAndSend("/topic/Web", "sessionId\n" + sessionId + "\n");
     }
 
     private void sendMessageToSpecificSession(String sessionId, String message) {
-        messagingTemplate.convertAndSendToUser(sessionId, "/topic/message", message);
+        messagingTemplate.convertAndSendToUser(sessionId, "/topic/Web", message);
     }
 
 
     @MessageMapping("/timeUp") // 클라이언트에서 /app/timeUp로 메시지를 보내면 처리
     public String handleTimeUp(String message) {
         System.out.println("Received time up message: " + message);
-        messagingTemplate.convertAndSend("/topic/message", message);
+        messagingTemplate.convertAndSend("/topic/Web", message);
         messagingTemplate.convertAndSend("/topic/VR", message);
         return message;
     }
@@ -138,7 +136,7 @@ public class ChessController {
 
             if(!gameState.processMoveWEB(moveObj)) {
                 log.info("invalidMove");
-                messagingTemplate.convertAndSend("/topic/message", "invalidMove");
+                messagingTemplate.convertAndSend("/topic/Web", "invalidMove");
             }
             else {
                 getGameState(moveObj);
@@ -194,7 +192,7 @@ public class ChessController {
 
     @GetMapping("/state")
     public GameState getGameState(Move moveObj) {
-        messagingTemplate.convertAndSend("/topic/message", "validMove\n" +
+        messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
                 "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
                 " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
                 " color : " + moveObj.getColor() + " type : " + moveObj.getType() + "\n" + gameState.getBoardState());
@@ -202,10 +200,10 @@ public class ChessController {
     }
 
     @MessageMapping("/reset")
-    @SendTo("/topic/message")
+    @SendTo("/topic/Web")
     public GameState resetGame() {
         gameState.initializeBoard();
-        messagingTemplate.convertAndSend("/topic/message", "boardReset");
+        messagingTemplate.convertAndSend("/topic/Web", "boardReset");
         return gameState;
     }
 }
