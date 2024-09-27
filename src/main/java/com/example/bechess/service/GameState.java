@@ -1,5 +1,6 @@
 package com.example.bechess.service;
 
+import com.example.bechess.dto.ChessPiece;
 import com.example.bechess.dto.Move;
 import com.example.bechess.dto.Position;
 import lombok.Getter;

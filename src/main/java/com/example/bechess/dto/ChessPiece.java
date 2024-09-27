@@ -1,11 +1,8 @@
-package com.example.bechess.service;
+package com.example.bechess.dto;
 
-import com.example.bechess.dto.Move;
-import com.example.bechess.dto.Position;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.Map;
 import java.util.Objects;
 
 @Getter

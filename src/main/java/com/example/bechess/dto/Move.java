@@ -1,6 +1,5 @@
 package com.example.bechess.dto;
 
-import com.example.bechess.service.ChessPiece;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Getter;
 import lombok.Setter;
