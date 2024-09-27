@@ -569,6 +569,15 @@ public class GameState {
 
 
     public void initializeBoard() {
+        board = new HashMap<>();
+
+        // Initialize all positions to null
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                board.remove(new Position(col, row));
+            }
+        }
+
         // Initialize white pieces
         board.put(new Position(0, 0), new ChessPiece("ROOK", "WHITE", new Position(0, 0)));
         board.put(new Position(1, 0), new ChessPiece("KNIGHT", "WHITE", new Position(1, 0)));
