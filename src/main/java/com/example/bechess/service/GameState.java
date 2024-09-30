@@ -32,7 +32,6 @@ public class GameState {
     }
 
     public boolean processMoveWEB(Move move) {
-        getBoardState();
         log.info(String.valueOf(isValidMove(move, board)));
         if (isValidMove(move, board)) {
             updateBoard(move);
@@ -48,7 +47,6 @@ public class GameState {
     }
 
     public boolean processMoveVR(Move move) {
-        getBoardState();
         log.info(String.valueOf(isValidMove(move, board)));
         if (isValidMove(move, board)) {
             updateBoard(move);
@@ -190,6 +188,20 @@ public class GameState {
 
             // 대각선 공격
             if (dx == 1 && dy == direction && board.containsKey(to) && !board.get(to).getColor().equals(piece.getColor())) {
+                return true;
+            }
+
+            // 앙파상으로 상대 폰 잡기
+            if (move.getTo().equals(enPassantTarget)) {
+                Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
+                board.remove(capturePosition);
+                return true;
+            }
+
+            // 프로모션 처리 (디폴트로 퀸으로 프로모션)
+            if ((move.getTo().getY() == 7 && piece.getColor().equals("WHITE")) || (move.getTo().getY() == 0 && piece.getColor().equals("BLACK"))) {
+//                piece.setType("QUEEN");
+//                board.put(to, piece);
                 return true;
             }
 
@@ -391,7 +403,7 @@ public class GameState {
     }
 
     public void updateBoard(Move move) {
-        // 먼저 이동할 기물을 가져옵니다.
+        // 이동할 기물을 가져옴
         ChessPiece piece = board.get(move.getFrom());
         if (piece == null) {
             log.error("이동하려는 위치에 기물이 없습니다.");
@@ -401,10 +413,17 @@ public class GameState {
         // 특수 이동 처리 (캐슬링, 앙파상, 프로모션 등)
         handleSpecialMoves(move, piece);
 
-        // 기물의 위치를 업데이트합니다.
+        // 프로모션 처리
+        if (piece.getType().equals("PAWN") &&
+                (move.getTo().getY() == 7 || move.getTo().getY() == 0)) {
+            log.info("promotion : " + piece.getType());
+            piece.setType("QUEEN");  // 기본적으로 퀸으로 프로모션
+        }
+
+        // 기물의 위치 업데이트
         piece.setPosition(move.getTo());
 
-        // 원래 위치에서 기물을 제거합니다.
+        // 원래 위치에서 기물 제거
         board.remove(move.getFrom());
 
         // 기물 잡기 처리
@@ -412,17 +431,18 @@ public class GameState {
             board.remove(move.getTo());
         }
 
-        // 앙파상으로 상대 폰을 잡은 경우, 해당 폰을 제거합니다.
+        // 앙파상으로 상대 폰을 잡은 경우 처리
         if (piece.getType().equals("PAWN") && move.getTo().equals(enPassantTarget)) {
             Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
             board.remove(capturePosition);  // 앙파상으로 잡힌 폰을 제거
         }
 
-        // 새로운 위치에 기물을 배치합니다.
+        // 새로운 위치에 기물 배치
         board.put(move.getTo(), piece);
 
         log.info("piece = {}, {}, {}, {}", piece.getPosition().getX(), piece.getPosition().getY(), piece.getType(), piece.getColor());
     }
+
 
 
     private void handleSpecialMoves(Move move, ChessPiece piece) {
@@ -474,17 +494,6 @@ public class GameState {
                     enPassantTarget = new Position(move.getTo().getX(), (move.getFrom().getY() + move.getTo().getY()) / 2);
                 } else {
                     enPassantTarget = null;
-                }
-
-                // 앙파상으로 상대 폰 잡기
-                if (move.getTo().equals(enPassantTarget)) {
-                    Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
-                    board.remove(capturePosition);
-                }
-
-                // 프로모션 처리 (디폴트로 퀸으로 프로모션)
-                if ((move.getTo().getY() == 7 && piece.getColor().equals("WHITE")) || (move.getTo().getY() == 0 && piece.getColor().equals("BLACK"))) {
-                    piece.setType("QUEEN");
                 }
             }
         }
