@@ -226,7 +226,7 @@ public class ChessController {
         return gameState;
     }
 
-    @MessageMapping("/reset")
+    @MessageMapping("/Web/reset")
     @SendTo("/topic/Web")
     public GameState resetGame() {
         gameState = new GameState();
