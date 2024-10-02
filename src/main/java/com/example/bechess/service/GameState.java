@@ -37,11 +37,17 @@ public class GameState {
             updateBoard(move);
             switchPlayer();
             switchTurn();
+
+            // 체크메이트 여부 확인
+            if (isCheckmate()) {
+                log.info("체크메이트! 게임 종료.");
+                return false;  // 체크메이트 상태이므로 이동 불가
+            }
+
             log.info("현재 정보 : ", getCurrentPlayer(), getCurrentRole());
             getBoardState();
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
@@ -52,11 +58,17 @@ public class GameState {
             updateBoard(move);
             switchPlayer();
             switchTurn();
+
+            // 체크메이트 여부 확인
+            if (isCheckmate()) {
+                log.info("체크메이트! 게임 종료.");
+                return false;  // 체크메이트 상태이므로 이동 불가
+            }
+
             log.info("현재 정보 : ", getCurrentPlayer(), getCurrentRole());
             getBoardState();
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
@@ -141,6 +153,17 @@ public class GameState {
             return false; // 기물이 없거나 상대 기물인 경우
         }
 
+        // 가상의 이동을 처리하여 킹이 체크 상태에 빠지지 않는지 확인
+        Map<Position, ChessPiece> tempBoard = new HashMap<>(board);
+        tempBoard.remove(from);
+        tempBoard.put(move.getTo(), piece);  // 이동을 가정
+
+        // 만약 이 이동 후 킹이 체크 상태에 빠지면 유효하지 않은 이동으로 간주
+        if (isPositionUnderAttack(findKingPosition(currentPlayer), tempBoard)) {
+            return false;
+        }
+
+        // 각 기물의 타입에 따른 유효한 이동 체크
         switch (piece.getType()) {
             case "PAWN" -> {
                 return isValidPawnMove(move, board);
