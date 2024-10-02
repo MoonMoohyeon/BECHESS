@@ -45,7 +45,6 @@ public class GameState {
             }
 
             log.info("현재 정보 : ", getCurrentPlayer(), getCurrentRole());
-            getBoardState();
             return true;
         } else {
             return false;
@@ -66,11 +65,51 @@ public class GameState {
             }
 
             log.info("현재 정보 : ", getCurrentPlayer(), getCurrentRole());
-            getBoardState();
             return true;
         } else {
             return false;
         }
+    }
+
+    public void updateBoard(Move move) {
+        // 이동할 기물을 가져옴
+        ChessPiece piece = board.get(move.getFrom());
+        if (piece == null) {
+            log.error("이동하려는 위치에 기물이 없습니다.");
+            return;
+        }
+
+        // 특수 이동 처리 (캐슬링, 앙파상, 프로모션 등)
+        handleSpecialMoves(move, piece);
+
+        // 프로모션 처리
+        if (piece.getType().equals("PAWN") &&
+                (move.getTo().getY() == 7 || move.getTo().getY() == 0)) {
+            log.info("promotion : " + piece.getType());
+            piece.setType("QUEEN");  // 기본적으로 퀸으로 프로모션
+        }
+
+        // 기물의 위치 업데이트
+        piece.setPosition(move.getTo());
+
+        // 원래 위치에서 기물 제거
+        board.remove(move.getFrom());
+
+        // 기물 잡기 처리
+        if (board.containsKey(move.getTo()) && board.get(move.getTo()) != piece) {
+            board.remove(move.getTo());
+        }
+
+        // 앙파상으로 상대 폰을 잡은 경우 처리
+        if (piece.getType().equals("PAWN") && move.getTo().equals(enPassantTarget)) {
+            Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
+            board.remove(capturePosition);  // 앙파상으로 잡힌 폰을 제거
+        }
+
+        // 새로운 위치에 기물 배치
+        board.put(move.getTo(), piece);
+
+        log.info("piece = {}, {}, {}, {}", piece.getPosition().getX(), piece.getPosition().getY(), piece.getType(), piece.getColor());
     }
 
     public String getBoardState() {
@@ -107,60 +146,36 @@ public class GameState {
         return boardStringBuilder.toString();
     }
 
-    private char getPieceSymbol(ChessPiece piece) {
-        switch (piece.getType()) {
-            case "PAWN" -> {
-                return 'P';
-            }
-            case "KNIGHT" -> {
-                return 'N';
-            }
-            case "BISHOP" -> {
-                return 'B';
-            }
-            case "ROOK" -> {
-                return 'R';
-            }
-            case "QUEEN" -> {
-                return 'Q';
-            }
-            case "KING" -> {
-                return 'K';
-            }
-            default -> {
-                return '.';
-            }
-        }
-    }
-
-    public void switchPlayer() {
-        currentPlayer = currentPlayer.equals("WHITE") ? "BLACK" : "WHITE";
-    }
-
-    public void switchTurn() {
-        if (currentRole.equals("COMMANDER")) {
-            currentRole = "ACTOR";
-        } else {
-            currentRole = "COMMANDER";
-        }
-    }
-
     public boolean isValidMove(Move move, Map<Position, ChessPiece> board) {
         Position from = move.getFrom();
+        Position to = move.getTo();
         ChessPiece piece = board.get(from);
 
         if (piece == null || !piece.getColor().equals(currentPlayer)) {
             return false; // 기물이 없거나 상대 기물인 경우
         }
 
+        // 이동하려는 위치에 아군 기물이 있으면 이동 불가
+        if (board.containsKey(to) && board.get(to).getColor().equals(currentPlayer)) {
+            return false;
+        }
+
         // 가상의 이동을 처리하여 킹이 체크 상태에 빠지지 않는지 확인
         Map<Position, ChessPiece> tempBoard = new HashMap<>(board);
         tempBoard.remove(from);
-        tempBoard.put(move.getTo(), piece);  // 이동을 가정
+        tempBoard.put(to, piece);  // 이동을 가정
 
-        // 만약 이 이동 후 킹이 체크 상태에 빠지면 유효하지 않은 이동으로 간주
-        if (isPositionUnderAttack(findKingPosition(currentPlayer), tempBoard)) {
-            return false;
+        // 현재 플레이어의 킹 위치를 찾음
+        Position kingPosition = findKingPosition(currentPlayer);
+
+        // 만약 킹을 이동시키는 경우, 이동 후의 위치를 새로운 킹 위치로 설정
+        if (piece.getType().equals("KING")) {
+            kingPosition = to;
+        }
+
+        // 킹이 체크 상태에 빠지지 않도록 이동을 처리
+        if (isPositionUnderAttack(kingPosition, tempBoard)) {
+            return false; // 킹이 체크 상태에 빠지는 이동은 유효하지 않음
         }
 
         // 각 기물의 타입에 따른 유효한 이동 체크
@@ -181,7 +196,7 @@ public class GameState {
                 return isValidQueenMove(move);
             }
             case "KING" -> {
-                return isValidKingMove(move, board); // 이미 리팩토링된 메서드 사용
+                return isValidKingMove(move, board);
             }
             default -> {
                 return false;
@@ -281,7 +296,12 @@ public class GameState {
 
             // Normal king move (one square in any direction)
             if (dx <= 1 && dy <= 1) {
-                return !isPositionUnderAttack(to, board);  // 새로운 위치가 공격받지 않는지 확인
+                // 이동 후 킹이 체크 상태인지 확인
+                if (!isPositionUnderAttack(to, board)) {
+                    return true;  // 킹이 체크를 피할 수 있음
+                } else {
+                    return false;  // 이동 후에도 킹이 공격받는다면 이동 불가
+                }
             }
 
             // Castling
@@ -300,38 +320,58 @@ public class GameState {
             return false;
         }
 
-    public boolean isPositionUnderAttack(Position position, Map<Position, ChessPiece> board) {
-        for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
-            ChessPiece piece = entry.getValue();
+    private void handleSpecialMoves(Move move, ChessPiece piece) {
+        // KING 이동에 따른 캐슬링 불가 처리 및 캐슬링 이동 처리
+        switch (piece.getType()) {
+            case "KING" -> {
+                if (currentPlayer.equals("WHITE")) {
+                    whiteKingMoved = true;
+                    // 캐슬링: 킹이 두 칸 움직이면 룩도 같이 움직임
+                    if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(1, 0))) { // 킹사이드 캐슬링
+                        ChessPiece rook = board.remove(new Position(0, 0));
+                        rook.setPosition(new Position(2, 0));
+                        board.put(new Position(2, 0), rook);
+                    } else if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(5, 0))) { // 퀸사이드 캐슬링
+                        ChessPiece rook = board.remove(new Position(7, 0));
+                        rook.setPosition(new Position(4, 0));
+                        board.put(new Position(4, 0), rook);
+                    }
+                } else {
+                    blackKingMoved = true;
+                    // 캐슬링: 킹이 두 칸 움직이면 룩도 같이 움직임
+                    if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(1, 7))) { // 킹사이드 캐슬링
+                        ChessPiece rook = board.remove(new Position(0, 7));
+                        rook.setPosition(new Position(2, 7));
+                        board.put(new Position(2, 7), rook);
+                    } else if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(5, 7))) { // 퀸사이드 캐슬링
+                        ChessPiece rook = board.remove(new Position(7, 7));
+                        rook.setPosition(new Position(4, 7));
+                        board.put(new Position(4, 7), rook);
+                    }
+                }
+            }
 
-            // Only consider the opponent's pieces
-            if (!piece.getColor().equals(getCurrentPlayer())) {
-                Move potentialMove = new Move(entry.getKey(), position);
-                if (isValidMove(potentialMove, board)) {
-                    return true; // The position is under attack by an opponent's piece
+            // ROOK 이동에 따른 캐슬링 불가 처리
+            case "ROOK" -> {
+                if (currentPlayer.equals("WHITE")) {
+                    if (move.getFrom().equals(new Position(0, 0))) whiteRook1Moved = true;
+                    if (move.getFrom().equals(new Position(7, 0))) whiteRook2Moved = true;
+                } else {
+                    if (move.getFrom().equals(new Position(0, 7))) blackRook1Moved = true;
+                    if (move.getFrom().equals(new Position(7, 7))) blackRook2Moved = true;
+                }
+            }
+
+            // PAWN 이동에 따른 앙파상 처리 및 프로모션 처리
+            case "PAWN" -> {
+                // 앙파상 타겟 설정
+                if (Math.abs(move.getFrom().getY() - move.getTo().getY()) == 2) {
+                    enPassantTarget = new Position(move.getTo().getX(), (move.getFrom().getY() + move.getTo().getY()) / 2);
+                } else {
+                    enPassantTarget = null;
                 }
             }
         }
-        return false;
-    }
-
-    private boolean isInCheckOrThroughCheck(Position from, Position to, Map<Position, ChessPiece> board) {
-        if (isPositionUnderAttack(to, board)) {
-            return true;
-        }
-
-        // For castling, check if any position between `from` and `to` is under attack
-        if (Math.abs(to.getX() - from.getX()) == 2) { // Castling case
-            int step = (to.getX() - from.getX()) / 2; // Direction of castling
-            Position midPosition = new Position(from.getX() + step, from.getY());
-
-            // Check if the intermediate position is under attack
-            if (isPositionUnderAttack(midPosition, board)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     // 경로가 비어있는지 확인하는 헬퍼 메서드
@@ -387,6 +427,23 @@ public class GameState {
         throw new IllegalStateException("킹이 존재하지 않습니다.");  // 킹이 반드시 존재해야 함
     }
 
+    public boolean isPositionUnderAttack(Position position, Map<Position, ChessPiece> board) {
+        for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
+            ChessPiece piece = entry.getValue();
+
+            // Only consider the opponent's pieces
+            if (!piece.getColor().equals(currentPlayer)) {
+                Move potentialMove = new Move(entry.getKey(), position);
+                log.info("potential move: " + potentialMove.getType() + potentialMove.getColor() + potentialMove.getFrom().getX() + potentialMove.getFrom().getY() + potentialMove.getTo().getX() + potentialMove.getTo().getY());
+                if (isValidMove(potentialMove, board)) {
+                    log.info("under attack!");
+                    return true; // The position is under attack by an opponent's piece
+                }
+            }
+        }
+        return false;
+    }
+
     // 킹이 체크 상태에서 벗어날 수 있는지 확인 (킹이 이동할 수 있는 모든 위치를 확인)
     private boolean canKingEscapeCheck(Position kingPosition) {
         for (int dx = -1; dx <= 1; dx++) {
@@ -403,13 +460,11 @@ public class GameState {
 
     // 다른 기물이 공격자를 막거나 제거할 수 있는지 확인
     private boolean canBlockOrCaptureAttacker(Position kingPosition) {
-        // 상대방 기물이 킹을 공격하고 있는지 확인
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             ChessPiece attacker = entry.getValue();
             if (!attacker.getColor().equals(currentPlayer)) {  // 공격자는 상대방 기물이어야 함
                 Move potentialMove = new Move(entry.getKey(), kingPosition);
                 if (isValidMove(potentialMove, board)) {
-                    // 공격자를 제거하거나 경로를 막을 수 있는지 확인
                     for (Map.Entry<Position, ChessPiece> defenderEntry : board.entrySet()) {
                         ChessPiece defender = defenderEntry.getValue();
                         if (defender.getColor().equals(currentPlayer)) {  // 방어자는 현재 플레이어의 기물이어야 함
@@ -425,100 +480,60 @@ public class GameState {
         return false;  // 공격자를 막거나 제거할 수 없다면 false 반환
     }
 
-    public void updateBoard(Move move) {
-        // 이동할 기물을 가져옴
-        ChessPiece piece = board.get(move.getFrom());
-        if (piece == null) {
-            log.error("이동하려는 위치에 기물이 없습니다.");
-            return;
+    private boolean isInCheckOrThroughCheck(Position from, Position to, Map<Position, ChessPiece> board) {
+        if (isPositionUnderAttack(to, board)) {
+            return true;
         }
 
-        // 특수 이동 처리 (캐슬링, 앙파상, 프로모션 등)
-        handleSpecialMoves(move, piece);
+        // For castling, check if any position between `from` and `to` is under attack
+        if (Math.abs(to.getX() - from.getX()) == 2) { // Castling case
+            int step = (to.getX() - from.getX()) / 2; // Direction of castling
+            Position midPosition = new Position(from.getX() + step, from.getY());
 
-        // 프로모션 처리
-        if (piece.getType().equals("PAWN") &&
-                (move.getTo().getY() == 7 || move.getTo().getY() == 0)) {
-            log.info("promotion : " + piece.getType());
-            piece.setType("QUEEN");  // 기본적으로 퀸으로 프로모션
+            // Check if the intermediate position is under attack
+            if (isPositionUnderAttack(midPosition, board)) {
+                return true;
+            }
         }
 
-        // 기물의 위치 업데이트
-        piece.setPosition(move.getTo());
-
-        // 원래 위치에서 기물 제거
-        board.remove(move.getFrom());
-
-        // 기물 잡기 처리
-        if (board.containsKey(move.getTo()) && board.get(move.getTo()) != piece) {
-            board.remove(move.getTo());
-        }
-
-        // 앙파상으로 상대 폰을 잡은 경우 처리
-        if (piece.getType().equals("PAWN") && move.getTo().equals(enPassantTarget)) {
-            Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
-            board.remove(capturePosition);  // 앙파상으로 잡힌 폰을 제거
-        }
-
-        // 새로운 위치에 기물 배치
-        board.put(move.getTo(), piece);
-
-        log.info("piece = {}, {}, {}, {}", piece.getPosition().getX(), piece.getPosition().getY(), piece.getType(), piece.getColor());
+        return false;
     }
 
-
-
-    private void handleSpecialMoves(Move move, ChessPiece piece) {
-        // KING 이동에 따른 캐슬링 불가 처리 및 캐슬링 이동 처리
+    private char getPieceSymbol(ChessPiece piece) {
         switch (piece.getType()) {
-            case "KING" -> {
-                if (currentPlayer.equals("WHITE")) {
-                    whiteKingMoved = true;
-                    // 캐슬링: 킹이 두 칸 움직이면 룩도 같이 움직임
-                    if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(1, 0))) { // 킹사이드 캐슬링
-                        ChessPiece rook = board.remove(new Position(0, 0));
-                        rook.setPosition(new Position(2, 0));
-                        board.put(new Position(2, 0), rook);
-                    } else if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(5, 0))) { // 퀸사이드 캐슬링
-                        ChessPiece rook = board.remove(new Position(7, 0));
-                        rook.setPosition(new Position(4, 0));
-                        board.put(new Position(4, 0), rook);
-                    }
-                } else {
-                    blackKingMoved = true;
-                    // 캐슬링: 킹이 두 칸 움직이면 룩도 같이 움직임
-                    if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(1, 7))) { // 킹사이드 캐슬링
-                        ChessPiece rook = board.remove(new Position(0, 7));
-                        rook.setPosition(new Position(2, 7));
-                        board.put(new Position(2, 7), rook);
-                    } else if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(5, 7))) { // 퀸사이드 캐슬링
-                        ChessPiece rook = board.remove(new Position(7, 7));
-                        rook.setPosition(new Position(4, 7));
-                        board.put(new Position(4, 7), rook);
-                    }
-                }
-            }
-
-            // ROOK 이동에 따른 캐슬링 불가 처리
-            case "ROOK" -> {
-                if (currentPlayer.equals("WHITE")) {
-                    if (move.getFrom().equals(new Position(0, 0))) whiteRook1Moved = true;
-                    if (move.getFrom().equals(new Position(7, 0))) whiteRook2Moved = true;
-                } else {
-                    if (move.getFrom().equals(new Position(0, 7))) blackRook1Moved = true;
-                    if (move.getFrom().equals(new Position(7, 7))) blackRook2Moved = true;
-                }
-            }
-
-            // PAWN 이동에 따른 앙파상 처리 및 프로모션 처리
             case "PAWN" -> {
-                // 앙파상 타겟 설정
-                if (Math.abs(move.getFrom().getY() - move.getTo().getY()) == 2) {
-                    enPassantTarget = new Position(move.getTo().getX(), (move.getFrom().getY() + move.getTo().getY()) / 2);
-                } else {
-                    enPassantTarget = null;
-                }
+                return 'P';
             }
+            case "KNIGHT" -> {
+                return 'N';
+            }
+            case "BISHOP" -> {
+                return 'B';
+            }
+            case "ROOK" -> {
+                return 'R';
+            }
+            case "QUEEN" -> {
+                return 'Q';
+            }
+            case "KING" -> {
+                return 'K';
+            }
+            default -> {
+                return '.';
+            }
+        }
+    }
+
+    public void switchPlayer() {
+        currentPlayer = currentPlayer.equals("WHITE") ? "BLACK" : "WHITE";
+    }
+
+    public void switchTurn() {
+        if (currentRole.equals("COMMANDER")) {
+            currentRole = "ACTOR";
+        } else {
+            currentRole = "COMMANDER";
         }
     }
 
