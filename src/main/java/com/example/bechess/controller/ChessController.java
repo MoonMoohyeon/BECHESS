@@ -83,7 +83,7 @@ public class ChessController {
         }
     }
 
-    @MessageMapping("/Web/timeUp") // 클라이언트에서 /app/timeUp로 메시지를 보내면 처리
+    @MessageMapping("/Web/timeUp")
     public String handleTimeUp(String message) {
         System.out.println("Received time up message: " + message);
         messagingTemplate.convertAndSend("/topic/Web", message);

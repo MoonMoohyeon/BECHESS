@@ -7,6 +7,7 @@ import lombok.Getter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -125,7 +126,6 @@ public class GameState {
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             Position pos = entry.getKey();
             ChessPiece piece = entry.getValue();
-            // x축 반전: visualBoard[pos.getY()][7 - pos.getX()]
             visualBoard[pos.getY()][7 - pos.getX()] = getPieceSymbol(piece);
         }
 
@@ -433,7 +433,7 @@ public class GameState {
 
             // Only consider the opponent's pieces
             if (!piece.getColor().equals(currentPlayer)) {
-                Move potentialMove = new Move(entry.getKey(), position);
+                Move potentialMove = new Move(entry.getKey(), position, entry.getValue().getColor(), entry.getValue().getType());
                 log.info("potential move: " + potentialMove.getType() + potentialMove.getColor() + potentialMove.getFrom().getX() + potentialMove.getFrom().getY() + potentialMove.getTo().getX() + potentialMove.getTo().getY());
                 if (isValidMove(potentialMove, board)) {
                     log.info("under attack!");

@@ -30,4 +30,11 @@ public class Move {
         this.from = from;
         this.to = to;
     }
+
+    public Move(Position from, Position to, String color, String type) {
+        this.from = from;
+        this.to = to;
+        this.color = color;
+        this.type = type;
+    }
 }
