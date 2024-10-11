@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Stack;
 
 @Getter
 public class GameState {
@@ -18,6 +19,11 @@ public class GameState {
     private Map<Position, ChessPiece> board = new HashMap<>();
     private String currentPlayer = "WHITE";
     private String currentRole; // COMMANDER or ACTOR
+
+    private Position from;
+    private Position to;
+    private ChessPiece movedPiece;
+    private ChessPiece capturedPiece;
     private boolean whiteKingMoved = false;
     private boolean blackKingMoved = false;
     private boolean whiteRook1Moved = false;
@@ -26,6 +32,11 @@ public class GameState {
     private boolean blackRook2Moved = false;
     private Position enPassantTarget;
 
+    private Stack<PreviousMove> moveHistory = new Stack<>(); // 이동 기록 스택
+
+    private Move Webmove;
+    private Move VRmove;
+
     public GameState() {
         this.board = new HashMap<>();
         this.currentRole = "COMMANDER";
@@ -33,7 +44,26 @@ public class GameState {
     }
 
     public boolean processMoveWEB(Move move) {
+        Webmove = move;
         log.info(String.valueOf(isValidMove(move, board)));
+
+        ChessPiece movedPiece = board.get(move.getFrom());
+        ChessPiece capturedPiece = board.get(move.getTo());
+
+        moveHistory.push(new PreviousMove(
+                move.getFrom(),
+                move.getTo(),
+                movedPiece,
+                capturedPiece,
+                whiteKingMoved,
+                blackKingMoved,
+                whiteRook1Moved,
+                whiteRook2Moved,
+                blackRook1Moved,
+                blackRook2Moved,
+                enPassantTarget
+        ));
+
         if (isValidMove(move, board)) {
             updateBoard(move);
             switchPlayer();
@@ -53,6 +83,7 @@ public class GameState {
     }
 
     public boolean processMoveVR(Move move) {
+        VRmove = move;
         log.info(String.valueOf(isValidMove(move, board)));
         if (isValidMove(move, board)) {
             updateBoard(move);
@@ -498,6 +529,44 @@ public class GameState {
 
         return false;
     }
+
+    public void undoLastMove() {
+        if (moveHistory.isEmpty()) {
+            log.warn("되돌릴 수 있는 이동이 없습니다.");
+            return;
+        }
+
+        // 마지막 이동을 꺼냄
+        PreviousMove lastMove = moveHistory.pop();
+
+        // 기물의 위치를 되돌림
+        ChessPiece movedPiece = lastMove.getMovedPiece();
+        ChessPiece capturedPiece = lastMove.getCapturedPiece();
+
+        board.remove(lastMove.getTo());  // 마지막 이동에서 기물이 있었던 위치 제거
+        board.put(lastMove.getFrom(), movedPiece);  // 기물을 원래 위치로 복구
+        movedPiece.setPosition(lastMove.getFrom());
+
+        // 잡힌 기물이 있으면 복구
+        if (capturedPiece != null) {
+            board.put(lastMove.getTo(), capturedPiece);
+        }
+
+        // 특수한 상태 복구
+        whiteKingMoved = lastMove.isWhiteKingMoved();
+        blackKingMoved = lastMove.isBlackKingMoved();
+        whiteRook1Moved = lastMove.isWhiteRook1Moved();
+        whiteRook2Moved = lastMove.isWhiteRook2Moved();
+        blackRook1Moved = lastMove.isBlackRook1Moved();
+        blackRook2Moved = lastMove.isBlackRook2Moved();
+        enPassantTarget = lastMove.getEnPassantTarget();
+
+        // 턴을 원래 플레이어로 되돌림
+        switchPlayer();
+
+        log.info("이전 턴을 되돌렸습니다.");
+    }
+
 
     private char getPieceSymbol(ChessPiece piece) {
         switch (piece.getType()) {
