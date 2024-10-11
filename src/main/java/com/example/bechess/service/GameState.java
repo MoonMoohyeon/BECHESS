@@ -37,6 +37,9 @@ public class GameState {
     private Move Webmove;
     private Move VRmove;
 
+    private Position castledRook;
+    private boolean promitioned;
+
     public GameState() {
         this.board = new HashMap<>();
         this.currentRole = "COMMANDER";
@@ -85,6 +88,13 @@ public class GameState {
     public boolean processMoveVR(Move move) {
         VRmove = move;
         log.info(String.valueOf(isValidMove(move, board)));
+
+        if(Webmove != VRmove) {
+            undoLastMove();
+        }
+        else {
+            return true;
+        }
         if (isValidMove(move, board)) {
             updateBoard(move);
             switchPlayer();
@@ -205,7 +215,7 @@ public class GameState {
         }
 
         // 킹이 체크 상태에 빠지지 않도록 이동을 처리
-        if (isPositionUnderAttack(kingPosition, tempBoard)) {
+        if (isKingUnderAttack(kingPosition, tempBoard)) {
             return false; // 킹이 체크 상태에 빠지는 이동은 유효하지 않음
         }
 
@@ -328,7 +338,7 @@ public class GameState {
             // Normal king move (one square in any direction)
             if (dx <= 1 && dy <= 1) {
                 // 이동 후 킹이 체크 상태인지 확인
-                if (!isPositionUnderAttack(to, board)) {
+                if (!isKingUnderAttack(to, board)) {
                     return true;  // 킹이 체크를 피할 수 있음
                 } else {
                     return false;  // 이동 후에도 킹이 공격받는다면 이동 불가
@@ -429,7 +439,7 @@ public class GameState {
         Position kingPosition = findKingPosition(currentPlayer);
 
         // 킹이 체크 상태인지 확인
-        if (!isPositionUnderAttack(kingPosition, board)) {
+        if (!isKingUnderAttack(kingPosition, board)) {
             return false;  // 킹이 체크 상태가 아니라면 체크메이트가 아님
         }
 
@@ -458,22 +468,23 @@ public class GameState {
         throw new IllegalStateException("킹이 존재하지 않습니다.");  // 킹이 반드시 존재해야 함
     }
 
-    public boolean isPositionUnderAttack(Position position, Map<Position, ChessPiece> board) {
+    public boolean isKingUnderAttack(Position kingPosition, Map<Position, ChessPiece> board) {
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             ChessPiece piece = entry.getValue();
 
             // Only consider the opponent's pieces
             if (!piece.getColor().equals(currentPlayer)) {
-                Move potentialMove = new Move(entry.getKey(), position, entry.getValue().getColor(), entry.getValue().getType());
+                Move potentialMove = new Move(entry.getKey(), kingPosition, entry.getValue().getColor(), entry.getValue().getType());
                 log.info("potential move: " + potentialMove.getType() + potentialMove.getColor() + potentialMove.getFrom().getX() + potentialMove.getFrom().getY() + potentialMove.getTo().getX() + potentialMove.getTo().getY());
                 if (isValidMove(potentialMove, board)) {
-                    log.info("under attack!");
-                    return true; // The position is under attack by an opponent's piece
+                    log.info("King is under attack!");
+                    return true; // The king is under attack by an opponent's piece
                 }
             }
         }
-        return false;
+        return false; // The king is not under attack
     }
+
 
     // 킹이 체크 상태에서 벗어날 수 있는지 확인 (킹이 이동할 수 있는 모든 위치를 확인)
     private boolean canKingEscapeCheck(Position kingPosition) {
@@ -481,7 +492,7 @@ public class GameState {
             for (int dy = -1; dy <= 1; dy++) {
                 if (dx == 0 && dy == 0) continue;  // 제자리 움직임 무시
                 Position newPosition = new Position(kingPosition.getX() + dx, kingPosition.getY() + dy);
-                if (isValidKingMove(new Move(kingPosition, newPosition), board) && !isPositionUnderAttack(newPosition, board)) {
+                if (isValidKingMove(new Move(kingPosition, newPosition), board) && !isKingUnderAttack(newPosition, board)) {
                     return true;  // 킹이 체크 상태에서 벗어날 수 있다면 true 반환
                 }
             }
@@ -512,7 +523,7 @@ public class GameState {
     }
 
     private boolean isInCheckOrThroughCheck(Position from, Position to, Map<Position, ChessPiece> board) {
-        if (isPositionUnderAttack(to, board)) {
+        if (isKingUnderAttack(to, board)) {
             return true;
         }
 
@@ -522,7 +533,7 @@ public class GameState {
             Position midPosition = new Position(from.getX() + step, from.getY());
 
             // Check if the intermediate position is under attack
-            if (isPositionUnderAttack(midPosition, board)) {
+            if (isKingUnderAttack(midPosition, board)) {
                 return true;
             }
         }
