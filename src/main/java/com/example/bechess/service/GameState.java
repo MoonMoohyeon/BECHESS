@@ -68,8 +68,6 @@ public class GameState {
 
         if (isValidMove(move, board)) {
             updateBoard(move);
-            switchPlayer();
-            switchTurn();
 
             // 체크메이트 여부 확인
             if (isCheckmate()) {
@@ -77,8 +75,9 @@ public class GameState {
                 return false;  // 체크메이트 상태이므로 이동 불가
             }
 
-            log.info("현재 정보 : ", getCurrentPlayer(), getCurrentRole());
+            log.info("현재 정보 : " + getCurrentPlayer() + getCurrentRole());
             getBoardState(board);
+            switchPlayer();
             return true;
         } else {
             return false;
@@ -105,7 +104,7 @@ public class GameState {
                 return false;  // 체크메이트 상태이므로 이동 불가
             }
 
-            log.info("현재 정보 : ", getCurrentPlayer(), getCurrentRole());
+            log.info("현재 정보 : " + getCurrentPlayer() + getCurrentRole());
             return true;
         } else {
             return false;
@@ -189,6 +188,8 @@ public class GameState {
         Position to = move.getTo();
         ChessPiece piece = board.get(from);
 
+        log.info("from : " + from.getX() + from.getY() + " to : " + to.getX() + to.getY() + " piece : " + piece.getType() + " color : " + piece.getColor());
+
         if (piece == null || !piece.getColor().equals(currentPlayer)) {
             return false; // 기물이 없거나 상대 기물인 경우
         }
@@ -200,8 +201,6 @@ public class GameState {
 
         // 가상의 이동을 처리하여 킹이 체크 상태에 빠지지 않는지 확인
         Map<Position, ChessPiece> tempBoard = new HashMap<>(board);
-        log.info("tempboard : ");
-        getBoardState(tempBoard);
         tempBoard.remove(from);
         tempBoard.put(to, piece);  // 이동을 가정
 
@@ -212,9 +211,6 @@ public class GameState {
         if (piece.getType().equals("KING")) {
             kingPosition = to;
         }
-
-        log.info("tempboard2 : ");
-        getBoardState(tempBoard);
 
         // 킹이 체크 상태에 빠지지 않도록 이동을 처리
         if (isKingUnderAttack(kingPosition, tempBoard)) {
@@ -471,6 +467,10 @@ public class GameState {
     }
 
     public boolean isKingUnderAttack(Position kingPosition, Map<Position, ChessPiece> board) {
+
+        log.info("tempboard2 : ");
+        getBoardState(board);
+
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             ChessPiece piece = entry.getValue();
 
