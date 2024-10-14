@@ -117,10 +117,6 @@ public class ChessController {
             // Create Move object
             Move moveObj = new Move(eventTime, from, to, color, type);
 
-            // Log the created Move object for verification
-            log.info("Move object created: {}", moveObj);
-            log.info("movefrom = {}, {}", moveObj.getFrom().getX(), moveObj.getFrom().getY());
-
             if(!gameState.processMoveWEB(moveObj)) {
                 log.info("invalidMove");
                 messagingTemplate.convertAndSend("/topic/Web", "invalidMove");
@@ -159,10 +155,6 @@ public class ChessController {
 
             // Create Move object
             Move moveObj = new Move(eventTime, from, to, color, type);
-
-            // Log the created Move object for verification
-            log.info("Move object created: {}", moveObj);
-            log.info("movefrom = {}, {}", moveObj.getFrom().getX(), moveObj.getFrom().getY());
 
             if(!gameState.processMoveVR(moveObj)) {
                 log.info("invalidMove");
@@ -222,7 +214,8 @@ public class ChessController {
         messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
                 "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
                 " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
-                " color : " + moveObj.getColor() + " type : " + moveObj.getType() + "\n" + gameState.getBoardState());
+                " color : " + moveObj.getColor() + " type : " + moveObj.getType());
+//                + "\n" + gameState.getBoardState());
         return gameState;
     }
 

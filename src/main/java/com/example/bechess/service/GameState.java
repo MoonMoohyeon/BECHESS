@@ -48,7 +48,6 @@ public class GameState {
 
     public boolean processMoveWEB(Move move) {
         Webmove = move;
-        log.info(String.valueOf(isValidMove(move, board)));
 
         ChessPiece movedPiece = board.get(move.getFrom());
         ChessPiece capturedPiece = board.get(move.getTo());
@@ -79,6 +78,7 @@ public class GameState {
             }
 
             log.info("현재 정보 : ", getCurrentPlayer(), getCurrentRole());
+            getBoardState(board);
             return true;
         } else {
             return false;
@@ -87,7 +87,6 @@ public class GameState {
 
     public boolean processMoveVR(Move move) {
         VRmove = move;
-        log.info(String.valueOf(isValidMove(move, board)));
 
         if(Webmove != VRmove) {
             undoLastMove();
@@ -150,11 +149,9 @@ public class GameState {
 
         // 새로운 위치에 기물 배치
         board.put(move.getTo(), piece);
-
-        log.info("piece = {}, {}, {}, {}", piece.getPosition().getX(), piece.getPosition().getY(), piece.getType(), piece.getColor());
     }
 
-    public String getBoardState() {
+    public String getBoardState(Map<Position, ChessPiece> board) {
         StringBuilder boardStringBuilder = new StringBuilder();
 
         char[][] visualBoard = new char[8][8];
@@ -203,6 +200,8 @@ public class GameState {
 
         // 가상의 이동을 처리하여 킹이 체크 상태에 빠지지 않는지 확인
         Map<Position, ChessPiece> tempBoard = new HashMap<>(board);
+        log.info("tempboard : ");
+        getBoardState(tempBoard);
         tempBoard.remove(from);
         tempBoard.put(to, piece);  // 이동을 가정
 
@@ -213,6 +212,9 @@ public class GameState {
         if (piece.getType().equals("KING")) {
             kingPosition = to;
         }
+
+        log.info("tempboard2 : ");
+        getBoardState(tempBoard);
 
         // 킹이 체크 상태에 빠지지 않도록 이동을 처리
         if (isKingUnderAttack(kingPosition, tempBoard)) {
@@ -475,7 +477,7 @@ public class GameState {
             // Only consider the opponent's pieces
             if (!piece.getColor().equals(currentPlayer)) {
                 Move potentialMove = new Move(entry.getKey(), kingPosition, entry.getValue().getColor(), entry.getValue().getType());
-                log.info("potential move: " + potentialMove.getType() + potentialMove.getColor() + potentialMove.getFrom().getX() + potentialMove.getFrom().getY() + potentialMove.getTo().getX() + potentialMove.getTo().getY());
+                log.info("king : " + potentialMove.getTo().getX() + potentialMove.getTo().getY() + " type and color : " + potentialMove.getType() + potentialMove.getColor() + " from : "  + potentialMove.getFrom().getX() + potentialMove.getFrom().getY());
                 if (isValidMove(potentialMove, board)) {
                     log.info("King is under attack!");
                     return true; // The king is under attack by an opponent's piece
