@@ -20,10 +20,6 @@ public class GameState {
     private String currentPlayer = "WHITE";
     private String currentRole; // COMMANDER or ACTOR
 
-    private Position from;
-    private Position to;
-    private ChessPiece movedPiece;
-    private ChessPiece capturedPiece;
     private boolean whiteKingMoved = false;
     private boolean blackKingMoved = false;
     private boolean whiteRook1Moved = false;
@@ -31,6 +27,7 @@ public class GameState {
     private boolean blackRook1Moved = false;
     private boolean blackRook2Moved = false;
     private Position enPassantTarget;
+    private boolean isCheck;
 
     private Stack<PreviousMove> moveHistory = new Stack<>(); // 이동 기록 스택
 
@@ -47,6 +44,13 @@ public class GameState {
     }
 
     public boolean processMoveWEB(Move move) {
+
+        // 체크메이트 여부 확인
+        if (isCheckmate()) {
+            log.info("체크메이트! 게임 종료.");
+            return false;  // 체크메이트 상태이므로 이동 불가
+        }
+
         Webmove = move;
 
         ChessPiece movedPiece = board.get(move.getFrom());
@@ -66,14 +70,29 @@ public class GameState {
                 enPassantTarget
         ));
 
-        if (isValidMove(move, board)) {
-            updateBoard(move);
+        Position to = move.getTo();
 
-            // 체크메이트 여부 확인
-            if (isCheckmate()) {
-                log.info("체크메이트! 게임 종료.");
-                return false;  // 체크메이트 상태이므로 이동 불가
+        if (movedPiece == null || !movedPiece.getColor().equals(currentPlayer)) {
+            return false; // 기물이 없거나 상대 기물인 경우
+        }
+
+        // 이동하려는 위치에 아군 기물이 있으면 이동 불가
+        if (board.containsKey(to) && board.get(to).getColor().equals(currentPlayer)) {
+            return false;
+        }
+
+        if (isValidMove(move, board)) {
+
+//            Map<Position, ChessPiece> tempBoard = new HashMap<>(board);
+//            tempBoard.remove(from);
+//            tempBoard.put(to, movedPiece);  // 이동을 가정
+
+            Position kingPosition = findKingPosition(currentPlayer);
+            if (isKingUnderAttack(kingPosition, board)) {
+                return false; // 킹이 체크 상태에 빠지는 이동은 유효하지 않음
             }
+
+            updateBoard(move);
 
             log.info("현재 정보 : " + getCurrentPlayer() + getCurrentRole());
             getBoardState(board);
@@ -85,6 +104,13 @@ public class GameState {
     }
 
     public boolean processMoveVR(Move move) {
+
+        // 체크메이트 여부 확인
+        if (isCheckmate()) {
+            log.info("체크메이트! 게임 종료.");
+            return false;  // 체크메이트 상태이므로 이동 불가
+        }
+
         VRmove = move;
 
         if(Webmove != VRmove) {
@@ -97,12 +123,6 @@ public class GameState {
             updateBoard(move);
             switchPlayer();
             switchTurn();
-
-            // 체크메이트 여부 확인
-            if (isCheckmate()) {
-                log.info("체크메이트! 게임 종료.");
-                return false;  // 체크메이트 상태이므로 이동 불가
-            }
 
             log.info("현재 정보 : " + getCurrentPlayer() + getCurrentRole());
             return true;
@@ -189,33 +209,6 @@ public class GameState {
         ChessPiece piece = board.get(from);
 
         log.info("from : " + from.getX() + from.getY() + " to : " + to.getX() + to.getY() + " piece : " + piece.getType() + " color : " + piece.getColor());
-
-        if (piece == null || !piece.getColor().equals(currentPlayer)) {
-            return false; // 기물이 없거나 상대 기물인 경우
-        }
-
-        // 이동하려는 위치에 아군 기물이 있으면 이동 불가
-        if (board.containsKey(to) && board.get(to).getColor().equals(currentPlayer)) {
-            return false;
-        }
-
-        // 가상의 이동을 처리하여 킹이 체크 상태에 빠지지 않는지 확인
-        Map<Position, ChessPiece> tempBoard = new HashMap<>(board);
-        tempBoard.remove(from);
-        tempBoard.put(to, piece);  // 이동을 가정
-
-        // 현재 플레이어의 킹 위치를 찾음
-        Position kingPosition = findKingPosition(currentPlayer);
-
-        // 만약 킹을 이동시키는 경우, 이동 후의 위치를 새로운 킹 위치로 설정
-        if (piece.getType().equals("KING")) {
-            kingPosition = to;
-        }
-
-        // 킹이 체크 상태에 빠지지 않도록 이동을 처리
-        if (isKingUnderAttack(kingPosition, tempBoard)) {
-            return false; // 킹이 체크 상태에 빠지는 이동은 유효하지 않음
-        }
 
         // 각 기물의 타입에 따른 유효한 이동 체크
         switch (piece.getType()) {
@@ -459,6 +452,7 @@ public class GameState {
     private Position findKingPosition(String color) {
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             ChessPiece piece = entry.getValue();
+//            log.info("entry : " + entry.getKey().getX() + entry.getKey().getY());
             if (piece.getType().equals("KING") && piece.getColor().equals(color)) {
                 return entry.getKey();
             }
@@ -467,10 +461,7 @@ public class GameState {
     }
 
     public boolean isKingUnderAttack(Position kingPosition, Map<Position, ChessPiece> board) {
-
-        log.info("tempboard2 : ");
-        getBoardState(board);
-
+//        log.info("KING : " + kingPosition.getX() + " " + kingPosition.getY());
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             ChessPiece piece = entry.getValue();
 
