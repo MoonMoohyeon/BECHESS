@@ -27,15 +27,15 @@ public class GameState {
     private boolean blackRook1Moved = false;
     private boolean blackRook2Moved = false;
     private Position enPassantTarget;
-    private boolean isCheck;
 
     private Stack<PreviousMove> moveHistory = new Stack<>(); // 이동 기록 스택
 
     private Move Webmove;
     private Move VRmove;
 
-    private Position castledRook;
-    private boolean promitioned;
+    private boolean checkmated = false;
+    private Position castledRook = null;
+    private boolean promotioned = false;
 
     public GameState() {
         this.board = new HashMap<>();

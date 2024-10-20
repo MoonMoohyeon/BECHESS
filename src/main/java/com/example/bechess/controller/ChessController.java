@@ -65,6 +65,7 @@ public class ChessController {
     @MessageMapping("/VR/join")
     public void VRjoin(SimpMessageHeaderAccessor headerAccessor) throws IOException {
         String sessionId = headerAccessor.getSessionId();
+        messagingTemplate.convertAndSend("/topic/VR", "connected");
         if (connectedVRSessions.size() > 1) {
             log.info("세션 거부됨.");
         } else if (sessionId != null) {
@@ -86,8 +87,8 @@ public class ChessController {
     @MessageMapping("/Web/timeUp")
     public String handleTimeUp(String message) {
         System.out.println("Received time up message: " + message);
-        messagingTemplate.convertAndSend("/topic/Web", message);
-        messagingTemplate.convertAndSend("/topic/VR", message);
+        messagingTemplate.convertAndSend("/topic/Web", "gameOver " + message + " won by timeover");
+        messagingTemplate.convertAndSend("/topic/VR", "gameOver " + message + " won by timeover");
         return message;
     }
 
@@ -225,6 +226,7 @@ public class ChessController {
         gameState = new GameState();
         gameState.initializeBoard();
         messagingTemplate.convertAndSend("/topic/Web", "boardReset");
+        messagingTemplate.convertAndSend("/topic/VR", "boardReset");
         return gameState;
     }
 
