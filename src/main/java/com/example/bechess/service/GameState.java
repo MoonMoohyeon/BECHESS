@@ -17,7 +17,7 @@ public class GameState {
 
     private static final Logger log = LoggerFactory.getLogger(GameState.class);
     private Map<Position, ChessPiece> board = new HashMap<>();
-    private String currentPlayer = "WHITE";
+    private String currentPlayer = "BLACK";
     private String currentRole; // COMMANDER or ACTOR
 
     private boolean whiteKingMoved = false;
@@ -26,7 +26,7 @@ public class GameState {
     private boolean whiteRook2Moved = false;
     private boolean blackRook1Moved = false;
     private boolean blackRook2Moved = false;
-    private Position enPassantTarget;
+    private Position enPassantTarget = null;
 
     private Stack<PreviousMove> moveHistory = new Stack<>(); // 이동 기록 스택
 
@@ -46,6 +46,7 @@ public class GameState {
     public boolean processMoveWEB(Move move) {
 
         // 체크메이트 여부 확인
+        switchPlayer();
         if (isCheckmate()) {
             log.info("체크메이트! 게임 종료.");
             return false;  // 체크메이트 상태이므로 이동 불가
@@ -87,8 +88,7 @@ public class GameState {
 //            tempBoard.remove(from);
 //            tempBoard.put(to, movedPiece);  // 이동을 가정
 
-            Position kingPosition = findKingPosition(currentPlayer);
-            if (isKingUnderAttack(kingPosition, board)) {
+            if (isKingUnderAttack(currentPlayer, board)) {
                 return false; // 킹이 체크 상태에 빠지는 이동은 유효하지 않음
             }
 
@@ -96,7 +96,6 @@ public class GameState {
 
             log.info("현재 정보 : " + getCurrentPlayer() + getCurrentRole());
             getBoardState(board);
-            switchPlayer();
             return true;
         } else {
             return false;
@@ -268,12 +267,12 @@ public class GameState {
                 return true;
             }
 
-            // 프로모션 처리 (디폴트로 퀸으로 프로모션)
-            if ((move.getTo().getY() == 7 && piece.getColor().equals("WHITE")) || (move.getTo().getY() == 0 && piece.getColor().equals("BLACK"))) {
+//            // 프로모션 처리 (디폴트로 퀸으로 프로모션)
+//            if ((move.getTo().getY() == 7 && piece.getColor().equals("WHITE")) || (move.getTo().getY() == 0 && piece.getColor().equals("BLACK"))) {
 //                piece.setType("QUEEN");
 //                board.put(to, piece);
-                return true;
-            }
+//                return true;
+//            }
 
             return false;
         }
@@ -326,26 +325,16 @@ public class GameState {
             int dx = Math.abs(to.getX() - from.getX());
             int dy = Math.abs(to.getY() - from.getY());
 
-            // Normal king move (one square in any direction)
-            if (dx <= 1 && dy <= 1) {
-                // 이동 후 킹이 체크 상태인지 확인
-                if (!isKingUnderAttack(to, board)) {
-                    return true;  // 킹이 체크를 피할 수 있음
-                } else {
-                    return false;  // 이동 후에도 킹이 공격받는다면 이동 불가
-                }
-            }
-
             // Castling
             if (dx == 2 && dy == 0) {
                 if (getCurrentPlayer().equals("WHITE") && !whiteKingMoved &&
-                        ((to.getX() == 5 && !whiteRook2Moved && isPathClear(from, new Position(7, 0), board) && !isInCheckOrThroughCheck(from, new Position(6, 0), board)) ||
-                                (to.getX() == 1 && !whiteRook1Moved && isPathClear(from, new Position(0, 0), board) && !isInCheckOrThroughCheck(from, new Position(2, 0), board)))) {
+                        ((to.getX() == 5 && !whiteRook2Moved && isPathClear(from, new Position(7, 0), board) ||
+                                (to.getX() == 1 && !whiteRook1Moved && isPathClear(from, new Position(0, 0), board))))) {
                     return true;
                 }
                 if (getCurrentPlayer().equals("BLACK") && !blackKingMoved &&
-                        ((to.getX() == 5 && !blackRook2Moved && isPathClear(from, new Position(7, 7), board) && !isInCheckOrThroughCheck(from, new Position(6, 7), board)) ||
-                                (to.getX() == 1 && !blackRook1Moved && isPathClear(from, new Position(0, 7), board) && !isInCheckOrThroughCheck(from, new Position(2, 7), board)))) {
+                        ((to.getX() == 5 && !blackRook2Moved && isPathClear(from, new Position(7, 7), board) ||
+                                (to.getX() == 1 && !blackRook1Moved && isPathClear(from, new Position(0, 7), board))))) {
                     return true;
                 }
             }
@@ -429,23 +418,7 @@ public class GameState {
         // 현재 플레이어의 킹의 위치를 찾음
         Position kingPosition = findKingPosition(currentPlayer);
 
-        // 킹이 체크 상태인지 확인
-        if (!isKingUnderAttack(kingPosition, board)) {
-            return false;  // 킹이 체크 상태가 아니라면 체크메이트가 아님
-        }
-
-        // 킹을 체크 상태에서 벗어날 수 있는지 확인
-        if (canKingEscapeCheck(kingPosition)) {
-            return false;  // 킹이 체크 상태에서 벗어날 수 있다면 체크메이트가 아님
-        }
-
-        // 다른 기물이 체크를 막을 수 있는지 확인
-        if (canBlockOrCaptureAttacker(kingPosition)) {
-            return false;  // 공격자를 제거하거나 막을 수 있다면 체크메이트가 아님
-        }
-
-        // 위의 방법들로 체크를 피할 수 없다면 체크메이트
-        return true;
+        return false;
     }
 
     // 킹의 위치 찾기
@@ -460,8 +433,8 @@ public class GameState {
         throw new IllegalStateException("킹이 존재하지 않습니다.");  // 킹이 반드시 존재해야 함
     }
 
-    public boolean isKingUnderAttack(Position kingPosition, Map<Position, ChessPiece> board) {
-//        log.info("KING : " + kingPosition.getX() + " " + kingPosition.getY());
+    public boolean isKingUnderAttack(String kingcolor, Map<Position, ChessPiece> board) {
+        Position kingPosition = findKingPosition(kingcolor);
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             ChessPiece piece = entry.getValue();
 
@@ -478,61 +451,6 @@ public class GameState {
         return false; // The king is not under attack
     }
 
-
-    // 킹이 체크 상태에서 벗어날 수 있는지 확인 (킹이 이동할 수 있는 모든 위치를 확인)
-    private boolean canKingEscapeCheck(Position kingPosition) {
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
-                if (dx == 0 && dy == 0) continue;  // 제자리 움직임 무시
-                Position newPosition = new Position(kingPosition.getX() + dx, kingPosition.getY() + dy);
-                if (isValidKingMove(new Move(kingPosition, newPosition), board) && !isKingUnderAttack(newPosition, board)) {
-                    return true;  // 킹이 체크 상태에서 벗어날 수 있다면 true 반환
-                }
-            }
-        }
-        return false;  // 킹이 체크 상태에서 벗어날 수 없다면 false 반환
-    }
-
-    // 다른 기물이 공격자를 막거나 제거할 수 있는지 확인
-    private boolean canBlockOrCaptureAttacker(Position kingPosition) {
-        for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
-            ChessPiece attacker = entry.getValue();
-            if (!attacker.getColor().equals(currentPlayer)) {  // 공격자는 상대방 기물이어야 함
-                Move potentialMove = new Move(entry.getKey(), kingPosition);
-                if (isValidMove(potentialMove, board)) {
-                    for (Map.Entry<Position, ChessPiece> defenderEntry : board.entrySet()) {
-                        ChessPiece defender = defenderEntry.getValue();
-                        if (defender.getColor().equals(currentPlayer)) {  // 방어자는 현재 플레이어의 기물이어야 함
-                            Move blockOrCaptureMove = new Move(defenderEntry.getKey(), attacker.getPosition());
-                            if (isValidMove(blockOrCaptureMove, board)) {
-                                return true;  // 공격자를 제거하거나 막을 수 있으면 true 반환
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return false;  // 공격자를 막거나 제거할 수 없다면 false 반환
-    }
-
-    private boolean isInCheckOrThroughCheck(Position from, Position to, Map<Position, ChessPiece> board) {
-        if (isKingUnderAttack(to, board)) {
-            return true;
-        }
-
-        // For castling, check if any position between `from` and `to` is under attack
-        if (Math.abs(to.getX() - from.getX()) == 2) { // Castling case
-            int step = (to.getX() - from.getX()) / 2; // Direction of castling
-            Position midPosition = new Position(from.getX() + step, from.getY());
-
-            // Check if the intermediate position is under attack
-            if (isKingUnderAttack(midPosition, board)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     public void undoLastMove() {
         if (moveHistory.isEmpty()) {
