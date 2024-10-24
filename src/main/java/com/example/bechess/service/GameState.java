@@ -72,6 +72,7 @@ public class GameState {
         ));
 
         Position to = move.getTo();
+        Position from = move.getFrom();
 
         if (movedPiece == null || !movedPiece.getColor().equals(currentPlayer)) {
             return false; // 기물이 없거나 상대 기물인 경우
@@ -84,12 +85,15 @@ public class GameState {
 
         if (isValidMove(move, board)) {
 
-//            Map<Position, ChessPiece> tempBoard = new HashMap<>(board);
-//            tempBoard.remove(from);
-//            tempBoard.put(to, movedPiece);  // 이동을 가정
+            Map<Position, ChessPiece> tempBoard = new HashMap<>(board);
+            tempBoard.remove(from);
+            tempBoard.put(to, movedPiece);  // 이동을 가정
 
-            if (isKingUnderAttack(currentPlayer, board)) {
+            if (isKingUnderAttack(currentPlayer, tempBoard)) {
                 return false; // 킹이 체크 상태에 빠지는 이동은 유효하지 않음
+            }
+            else {
+                log.info("else!!!");
             }
 
             updateBoard(move);
@@ -267,13 +271,6 @@ public class GameState {
                 return true;
             }
 
-//            // 프로모션 처리 (디폴트로 퀸으로 프로모션)
-//            if ((move.getTo().getY() == 7 && piece.getColor().equals("WHITE")) || (move.getTo().getY() == 0 && piece.getColor().equals("BLACK"))) {
-//                piece.setType("QUEEN");
-//                board.put(to, piece);
-//                return true;
-//            }
-
             return false;
         }
 
@@ -391,6 +388,11 @@ public class GameState {
                 } else {
                     enPassantTarget = null;
                 }
+                            // 프로모션 처리 (디폴트로 퀸으로 프로모션)
+//                if ((move.getTo().getY() == 7 && piece.getColor().equals("WHITE")) || (move.getTo().getY() == 0 && piece.getColor().equals("BLACK"))) {
+//                    piece.setType("QUEEN");
+//                    board.put(move.getTo(), piece);
+//                }
             }
         }
     }
@@ -416,13 +418,13 @@ public class GameState {
 
     public boolean isCheckmate() {
         // 현재 플레이어의 킹의 위치를 찾음
-        Position kingPosition = findKingPosition(currentPlayer);
+        Position kingPosition = findKingPosition(currentPlayer, board);
 
         return false;
     }
 
     // 킹의 위치 찾기
-    private Position findKingPosition(String color) {
+    private Position findKingPosition(String color, Map<Position, ChessPiece> board) {
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             ChessPiece piece = entry.getValue();
 //            log.info("entry : " + entry.getKey().getX() + entry.getKey().getY());
@@ -434,7 +436,9 @@ public class GameState {
     }
 
     public boolean isKingUnderAttack(String kingcolor, Map<Position, ChessPiece> board) {
-        Position kingPosition = findKingPosition(kingcolor);
+        log.info("is king underAttack board");
+        getBoardState(board);
+        Position kingPosition = findKingPosition(kingcolor, board);
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             ChessPiece piece = entry.getValue();
 
