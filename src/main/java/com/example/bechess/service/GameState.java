@@ -5,12 +5,14 @@ import com.example.bechess.dto.Move;
 import com.example.bechess.dto.Position;
 import lombok.Getter;
 
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 @Getter
+@Setter
 public class GameState {
 
     private static final Logger log = LoggerFactory.getLogger(GameState.class);
@@ -34,7 +36,7 @@ public class GameState {
 
     private boolean checkmated;
     private Position castledRook;
-    private boolean promotioned;
+    private Position promotion;
 
     public GameState() {
         this.board = new HashMap<Position, ChessPiece>();
@@ -54,22 +56,24 @@ public class GameState {
         this.VRmove = null;
         this.checkmated = false;
         this.castledRook = null;
-        this.promotioned = false;
+        this.promotion = null;
          initializeBoard();
     }
 
     public boolean processMoveWEB(Move move) {
 
-//        switchPlayer();
+        if (currentRole == "COMMANDER") {
+
+            switchPlayer();
 //        if (isCheckmate()) {
 //            log.info("체크메이트! 게임 종료.");
 //            return false;  // 체크메이트 상태이므로 이동 불가
 //        }
 
-        Webmove = move;
+            Webmove = move;
 
-        ChessPiece movedPiece = board.get(move.getFrom());
-        ChessPiece capturedPiece = board.get(move.getTo());
+            ChessPiece movedPiece = board.get(move.getFrom());
+            ChessPiece capturedPiece = board.get(move.getTo());
 //
 //        moveHistory.push(new PreviousMove(
 //                move.getFrom(),
@@ -85,61 +89,61 @@ public class GameState {
 //                enPassantTarget
 //        ));
 
-        Position to = move.getTo();
-        Position from = move.getFrom();
+            Position to = move.getTo();
+            Position from = move.getFrom();
 
-        if (movedPiece == null || !movedPiece.getColor().equals(currentPlayer)) {
-            return false; // 기물이 없거나 상대 기물인 경우
-        }
+            if (movedPiece == null || !movedPiece.getColor().equals(currentPlayer)) {
+                return false; // 기물이 없거나 상대 기물인 경우
+            }
 
-        // 이동하려는 위치에 아군 기물이 있으면 이동 불가
-        if (board.containsKey(to) && board.get(to).getColor().equals(currentPlayer)) {
+            // 이동하려는 위치에 아군 기물이 있으면 이동 불가
+            if (board.containsKey(to) && board.get(to).getColor().equals(currentPlayer)) {
+                return false;
+            }
+
+            if (isValidMove(move, board)) {
+
+                updateBoard(move);
+
+                if (isKingUnderAttack(currentPlayer)) {
+                    undoLastMove();
+                    return false; // 킹이 체크 상태에 빠지는 이동은 유효하지 않음
+                }
+
+                getBoardState(board);
+
+                return true;
+            }
+
             return false;
         }
-
-        if (isValidMove(move, board)) {
-
-            updateBoard(move);
-
-            if (isKingUnderAttack(currentPlayer)) {
-                undoLastMove();
-                return false; // 킹이 체크 상태에 빠지는 이동은 유효하지 않음
-            }
-
-            getBoardState(board);
-
-            switchPlayer();
-            if (isCheckmate()) {
-                log.info("체크메이트! 게임 종료.");
-                return false;  // 체크메이트 상태이므로 이동 불가
-            }
-
-            return true;
-        }
-
         return false;
     }
 
     public boolean processMoveVR(Move move) {
 
-        VRmove = move;
+        if (currentRole == "ACTOR") {
+            VRmove = move;
 
-        if(Webmove != VRmove) {
-            undoLastMove();
-        }
-        else {
-            return true;
-        }
-        if (isValidMove(move, board)) {
-            updateBoard(move);
-            switchPlayer();
-            switchTurn();
+            if (Webmove != VRmove) {
+                undoLastMove();
+            } else {
+                return true;
+            }
+            if (isValidMove(move, board)) {
+                updateBoard(move);
+                switchPlayer();
+                if(move.getColor().equals("BLACK")) {
+                    switchTurn();
+                }
 
-            log.info("현재 정보 : " + getCurrentPlayer() + getCurrentRole());
-            return true;
-        } else {
-            return false;
+                log.info("현재 정보 : " + getCurrentPlayer() + getCurrentRole());
+                return true;
+            } else {
+                return false;
+            }
         }
+        return false;
     }
 
     public void updateBoard(Move move) {
@@ -176,6 +180,7 @@ public class GameState {
                 (move.getTo().getY() == 7 || move.getTo().getY() == 0)) {
             log.info("promotion : " + piece.getType());
             piece.setType("QUEEN");  // 기본적으로 퀸으로 프로모션
+            promotion = move.getTo();
         }
 
         // 기물의 위치 업데이트
@@ -384,10 +389,12 @@ public class GameState {
                     if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(1, 0))) { // 킹사이드 캐슬링
                         ChessPiece rook = board.remove(new Position(0, 0));
                         rook.setPosition(new Position(2, 0));
+                        castledRook = new Position(2,0);
                         board.put(new Position(2, 0), rook);
                     } else if (move.getFrom().equals(new Position(3, 0)) && move.getTo().equals(new Position(5, 0))) { // 퀸사이드 캐슬링
                         ChessPiece rook = board.remove(new Position(7, 0));
                         rook.setPosition(new Position(4, 0));
+                        castledRook = new Position(4,0);
                         board.put(new Position(4, 0), rook);
                     }
                 } else {
@@ -396,10 +403,12 @@ public class GameState {
                     if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(1, 7))) { // 킹사이드 캐슬링
                         ChessPiece rook = board.remove(new Position(0, 7));
                         rook.setPosition(new Position(2, 7));
+                        castledRook = new Position(2,7);
                         board.put(new Position(2, 7), rook);
                     } else if (move.getFrom().equals(new Position(3, 7)) && move.getTo().equals(new Position(5, 7))) { // 퀸사이드 캐슬링
                         ChessPiece rook = board.remove(new Position(7, 7));
                         rook.setPosition(new Position(4, 7));
+                        castledRook = new Position(4,7);
                         board.put(new Position(4, 7), rook);
                     }
                 }
@@ -509,6 +518,7 @@ public class GameState {
         }
 
         log.info("체크메이트");
+        checkmated = true;
         return true; // 모든 경우를 시도해도 피할 수 없다면 체크메이트
     }
 

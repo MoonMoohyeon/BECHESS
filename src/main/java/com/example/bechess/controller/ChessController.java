@@ -87,8 +87,8 @@ public class ChessController {
     @MessageMapping("/Web/timeUp")
     public String handleTimeUp(String message) {
         System.out.println("Received time up message: " + message);
-        messagingTemplate.convertAndSend("/topic/Web", "gameOver " + message + " won by timeover");
-        messagingTemplate.convertAndSend("/topic/VR", "gameOver " + message + " won by timeover");
+        messagingTemplate.convertAndSend("/topic/Web", "gameOver " + message + " lose by timeover");
+        messagingTemplate.convertAndSend("/topic/VR", "gameOver " + message + " lose by timeover");
         return message;
     }
 
@@ -170,6 +170,37 @@ public class ChessController {
         }
     }
 
+    @GetMapping("/state")
+    public GameState getGameState(Move moveObj) {
+        messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
+                "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
+                " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
+                " color : " + moveObj.getColor() + " type : " + moveObj.getType());
+//                + "\n" + gameState.getBoardState());
+
+        if(gameState.isCheckmated()) {
+            messagingTemplate.convertAndSend("topic/Web", "gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
+            messagingTemplate.convertAndSend("topic/VR", "gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
+        }
+        else if(gameState.getPromotion() != null) {
+            messagingTemplate.convertAndSend("topic/Web", "promotion" + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
+            messagingTemplate.convertAndSend("topic/VR", "promotion" + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
+            gameState.setPromotion(null);
+        }
+        else if(gameState.getCastledRook() != null) {
+            messagingTemplate.convertAndSend("topic/Web", "castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
+            messagingTemplate.convertAndSend("topic/VR", "castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
+            gameState.setCastledRook(null);
+        }
+        else if(gameState.getEnPassantTarget() != null) {
+            messagingTemplate.convertAndSend("topic/Web", "enpassant" + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
+            messagingTemplate.convertAndSend("topic/VR", "enpassant" + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
+            gameState.setEnPassantTarget(null);
+        }
+
+        return gameState;
+    }
+
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
@@ -210,16 +241,6 @@ public class ChessController {
         messagingTemplate.convertAndSendToUser(sessionId, "/topic/Web", message);
     }
 
-    @GetMapping("/state")
-    public GameState getGameState(Move moveObj) {
-        messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
-                "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
-                " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
-                " color : " + moveObj.getColor() + " type : " + moveObj.getType());
-//                + "\n" + gameState.getBoardState());
-        return gameState;
-    }
-
     @MessageMapping("/Web/reset")
     @SendTo("/topic/Web")
     public GameState resetGame() {
@@ -231,12 +252,12 @@ public class ChessController {
     }
 
     private void assignColorsAndStartGame(String platform, String sessionID1, String sessionID2) {
-        Random random = new Random();
-        boolean assignW = random.nextBoolean();
-        String color1 = assignW ? "w" : "b";
-        String color2 = color1.equals("w") ? "b" : "w";
-        messagingTemplate.convertAndSend("/topic/" + platform, "sessionID : " + sessionID1 + " color : " + color1);
-        messagingTemplate.convertAndSend("/topic/" + platform, "sessionID : " + sessionID2 + " color : " + color2);
+//        Random random = new Random();
+//        boolean assignW = random.nextBoolean();
+//        String color1 = assignW ? "w" : "b";
+//        String color2 = color1.equals("w") ? "b" : "w";
+//        messagingTemplate.convertAndSend("/topic/" + platform, "sessionID : " + sessionID1 + " color : " + color1);
+//        messagingTemplate.convertAndSend("/topic/" + platform, "sessionID : " + sessionID2 + " color : " + color2);
         messagingTemplate.convertAndSend("/topic/" + platform, "gameStart");
     }
 }
