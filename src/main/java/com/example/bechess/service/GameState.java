@@ -14,59 +14,76 @@ import java.util.*;
 public class GameState {
 
     private static final Logger log = LoggerFactory.getLogger(GameState.class);
-    private Map<Position, ChessPiece> board = new HashMap<>();
-    private String currentPlayer = "BLACK";
-    private String currentRole; // COMMANDER or ACTOR
+    private Map<Position, ChessPiece> board;
+    private String currentPlayer;
+    private String currentRole;
 
-    private boolean whiteKingMoved = false;
-    private boolean blackKingMoved = false;
-    private boolean whiteRook1Moved = false;
-    private boolean whiteRook2Moved = false;
-    private boolean blackRook1Moved = false;
-    private boolean blackRook2Moved = false;
-    private Position enPassantTarget = null;
+    private boolean whiteKingMoved;
+    private boolean blackKingMoved;
+    private boolean whiteRook1Moved;
+    private boolean whiteRook2Moved;
+    private boolean blackRook1Moved;
+    private boolean blackRook2Moved;
+    private Position enPassantTarget;
+    private String enPassantTargetColor;
 
-    private Stack<PreviousMove> moveHistory = new Stack<>(); // 이동 기록 스택
+    private Stack<PreviousMove> moveHistory;
 
     private Move Webmove;
     private Move VRmove;
 
-    private boolean checkmated = false;
-    private Position castledRook = null;
-    private boolean promotioned = false;
+    private boolean checkmated;
+    private Position castledRook;
+    private boolean promotioned;
 
     public GameState() {
         this.board = new HashMap<Position, ChessPiece>();
+        this.currentPlayer = "BLACK";
         this.currentRole = "COMMANDER";
+        this.whiteKingMoved = false;
+        this.blackKingMoved = false;
+        this.whiteRook1Moved = false;
+        this.whiteRook2Moved = false;
+        this.blackRook1Moved = false;
+        this.blackRook2Moved = false;
+        this.enPassantTarget = null;
+        this.enPassantTargetColor = null;
+
+        this.moveHistory = new Stack<>();
+        this.Webmove = null;
+        this.VRmove = null;
+        this.checkmated = false;
+        this.castledRook = null;
+        this.promotioned = false;
          initializeBoard();
     }
 
     public boolean processMoveWEB(Move move) {
 
-        switchPlayer();
-        if (isCheckmate()) {
-            log.info("체크메이트! 게임 종료.");
-            return false;  // 체크메이트 상태이므로 이동 불가
-        }
+//        switchPlayer();
+//        if (isCheckmate()) {
+//            log.info("체크메이트! 게임 종료.");
+//            return false;  // 체크메이트 상태이므로 이동 불가
+//        }
 
         Webmove = move;
 
         ChessPiece movedPiece = board.get(move.getFrom());
         ChessPiece capturedPiece = board.get(move.getTo());
-
-        moveHistory.push(new PreviousMove(
-                move.getFrom(),
-                move.getTo(),
-                movedPiece,
-                capturedPiece,
-                whiteKingMoved,
-                blackKingMoved,
-                whiteRook1Moved,
-                whiteRook2Moved,
-                blackRook1Moved,
-                blackRook2Moved,
-                enPassantTarget
-        ));
+//
+//        moveHistory.push(new PreviousMove(
+//                move.getFrom(),
+//                move.getTo(),
+//                movedPiece,
+//                capturedPiece,
+//                whiteKingMoved,
+//                blackKingMoved,
+//                whiteRook1Moved,
+//                whiteRook2Moved,
+//                blackRook1Moved,
+//                blackRook2Moved,
+//                enPassantTarget
+//        ));
 
         Position to = move.getTo();
         Position from = move.getFrom();
@@ -88,16 +105,19 @@ public class GameState {
                 undoLastMove();
                 return false; // 킹이 체크 상태에 빠지는 이동은 유효하지 않음
             }
-            else {
-                log.info("else!!!");
+
+            getBoardState(board);
+
+            switchPlayer();
+            if (isCheckmate()) {
+                log.info("체크메이트! 게임 종료.");
+                return false;  // 체크메이트 상태이므로 이동 불가
             }
 
-            log.info("현재 정보 : " + getCurrentPlayer() + getCurrentRole());
-            getBoardState(board);
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     public boolean processMoveVR(Move move) {
@@ -123,6 +143,24 @@ public class GameState {
     }
 
     public void updateBoard(Move move) {
+
+        ChessPiece movedPiece = board.get(move.getFrom());
+        ChessPiece capturedPiece = board.get(move.getTo());
+
+        moveHistory.push(new PreviousMove(
+                move.getFrom(),
+                move.getTo(),
+                movedPiece,
+                capturedPiece,
+                whiteKingMoved,
+                blackKingMoved,
+                whiteRook1Moved,
+                whiteRook2Moved,
+                blackRook1Moved,
+                blackRook2Moved,
+                enPassantTarget
+        ));
+
         // 이동할 기물을 가져옴
         ChessPiece piece = board.get(move.getFrom());
         if (piece == null) {
@@ -199,7 +237,7 @@ public class GameState {
         Position to = move.getTo();
         ChessPiece piece = board.get(from);
 
-        log.info("from : " + from.getX() + from.getY() + " to : " + to.getX() + to.getY() + " piece : " + piece.getType() + " color : " + piece.getColor());
+//        log.info("from : " + from.getX() + from.getY() + " to : " + to.getX() + to.getY() + " piece : " + piece.getType() + " color : " + piece.getColor());
 
         // 각 기물의 타입에 따른 유효한 이동 체크
         switch (piece.getType()) {
@@ -253,7 +291,7 @@ public class GameState {
             }
 
             // 앙파상으로 상대 폰 잡기
-            if (move.getTo().equals(enPassantTarget)) {
+            if (move.getTo().equals(enPassantTarget) && !move.getColor().equals(enPassantTargetColor)) {
                 Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
                 board.remove(capturePosition);
                 return true;
@@ -383,6 +421,7 @@ public class GameState {
                 // 앙파상 타겟 설정
                 if (Math.abs(move.getFrom().getY() - move.getTo().getY()) == 2) {
                     enPassantTarget = new Position(move.getTo().getX(), (move.getFrom().getY() + move.getTo().getY()) / 2);
+                    enPassantTargetColor = move.getColor();
                 } else {
                     enPassantTarget = null;
                 }
@@ -420,6 +459,7 @@ public class GameState {
 
         // 현재 플레이어의 킹이 공격받는지 확인
         if (!isKingUnderAttack(currentPlayer)) {
+            log.info("return false1");
             return false; // 킹이 공격받지 않는다면 체크메이트가 아님
         }
 
@@ -429,6 +469,7 @@ public class GameState {
         // 2. 킹이 이동할 수 있는 각 위치에 대해 이동 후 킹이 공격받는지 확인
         for (Position move : possibleMoves) {
 
+            log.info("possible king moves : " + move.getX() + move.getY());
             Move tempmove = new Move(kingPosition, move);
             updateBoard(tempmove);
 
@@ -437,6 +478,7 @@ public class GameState {
             undoLastMove();
 
             if (kingIsSafe) {
+                log.info("return false2");
                 return false; // 킹이 피할 수 있는 위치가 하나라도 있다면 체크메이트 아님
             }
         }
@@ -450,6 +492,7 @@ public class GameState {
                 List<Position> legalMoves = getLegalMoves(piece.getPosition());
 
                 for (Position to : legalMoves) {
+                    log.info("possible legal moves : " + to.getX() + to.getY() + " " + piece.getType());
                     Move tempmove = new Move(piece.getPosition(), to);
                     updateBoard(tempmove);
 
@@ -457,12 +500,15 @@ public class GameState {
                     undoLastMove();
 
                     if (kingIsSafe) {
+                        log.info("tox : " + to.getX() + "toy: " + to.getY() + " " + piece.getType() + piece.getPosition().getX() + piece.getPosition().getY());
+                        log.info("return false3");
                         return false; // 킹이 체크를 피할 수 있다면 체크메이트 아님
                     }
                 }
             }
         }
 
+        log.info("체크메이트");
         return true; // 모든 경우를 시도해도 피할 수 없다면 체크메이트
     }
 
@@ -530,8 +576,6 @@ public class GameState {
     }
 
     public boolean isKingUnderAttack(String kingcolor) {
-        log.info("is king underAttack board");
-        getBoardState(board);
         Position kingPosition = findKingPosition(kingcolor, board);
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             ChessPiece piece = entry.getValue();
@@ -582,7 +626,7 @@ public class GameState {
         enPassantTarget = lastMove.getEnPassantTarget();
 
         // 턴을 원래 플레이어로 되돌림
-        switchPlayer();
+//        switchPlayer();
 
         log.info("이전 턴을 되돌렸습니다.");
     }
