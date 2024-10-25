@@ -8,9 +8,7 @@ import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 
 @Getter
 public class GameState {
@@ -417,10 +415,106 @@ public class GameState {
     }
 
     public boolean isCheckmate() {
-        // 현재 플레이어의 킹의 위치를 찾음
+        // 킹의 위치를 가져옴
         Position kingPosition = findKingPosition(currentPlayer, board);
 
-        return false;
+        // 현재 플레이어의 킹이 공격받는지 확인
+        if (!isKingUnderAttack(currentPlayer)) {
+            return false; // 킹이 공격받지 않는다면 체크메이트가 아님
+        }
+
+        // 1. 킹이 이동할 수 있는 모든 위치를 확인
+        List<Position> possibleMoves = getPossibleKingMoves(kingPosition);
+
+        // 2. 킹이 이동할 수 있는 각 위치에 대해 이동 후 킹이 공격받는지 확인
+        for (Position move : possibleMoves) {
+
+            Move tempmove = new Move(kingPosition, move);
+            updateBoard(tempmove);
+
+            // 이동 후 공격받는지 확인
+            boolean kingIsSafe = !isKingUnderAttack(currentPlayer);
+            undoLastMove();
+
+            if (kingIsSafe) {
+                return false; // 킹이 피할 수 있는 위치가 하나라도 있다면 체크메이트 아님
+            }
+        }
+
+        // 3. 다른 기물을 이동시켜 체크를 피할 수 있는지 확인
+        for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
+            ChessPiece piece = entry.getValue();
+
+            // 현재 플레이어의 기물만 고려
+            if (piece.getColor().equals(currentPlayer)) {
+                List<Position> legalMoves = getLegalMoves(piece.getPosition());
+
+                for (Position to : legalMoves) {
+                    Move tempmove = new Move(piece.getPosition(), to);
+                    updateBoard(tempmove);
+
+                    boolean kingIsSafe = !isKingUnderAttack(currentPlayer);
+                    undoLastMove();
+
+                    if (kingIsSafe) {
+                        return false; // 킹이 체크를 피할 수 있다면 체크메이트 아님
+                    }
+                }
+            }
+        }
+
+        return true; // 모든 경우를 시도해도 피할 수 없다면 체크메이트
+    }
+
+    private List<Position> getPossibleKingMoves(Position kingPosition) {
+        List<Position> possibleMoves = new ArrayList<>();
+
+        int[][] directions = {
+                {-1, -1}, {-1, 0}, {-1, 1},
+                {0, -1},          {0, 1},
+                {1, -1}, {1, 0}, {1, 1}
+        };
+
+        for (int[] direction : directions) {
+            int newX = kingPosition.getX() + direction[0];
+            int newY = kingPosition.getY() + direction[1];
+            Position newPosition = new Position(newX, newY);
+
+            // 체스판 범위 내의 위치만 추가
+            if (isPositionOnBoard(newPosition) && isValidKingMove(new Move(kingPosition, newPosition), board)) {
+                    possibleMoves.add(newPosition);
+            }
+        }
+
+        return possibleMoves;
+    }
+
+    private boolean isPositionOnBoard(Position position) {
+        return position.getX() >= 0 && position.getX() < 8 && position.getY() >= 0 && position.getY() < 8;
+    }
+
+    private List<Position> getLegalMoves(Position from) {
+        List<Position> legalMoves = new ArrayList<>();
+        ChessPiece piece = board.get(from);
+
+        if (piece == null) {
+            return legalMoves;
+        }
+
+        // 체스판의 모든 위치를 검사하여 유효한 이동인지 확인
+        for (int x = 0; x < 8; x++) {
+            for (int y = 0; y < 8; y++) {
+                Position to = new Position(x, y);
+                Move potentialMove = new Move(from, to, piece.getColor(), piece.getType());
+
+                // 이동이 유효하고 자기 기물이 없는 위치만 추가
+                if (isValidMove(potentialMove, board) && (!board.containsKey(to) || !board.get(to).getColor().equals(currentPlayer))) {
+                    legalMoves.add(to);
+                }
+            }
+        }
+
+        return legalMoves;
     }
 
     // 킹의 위치 찾기
