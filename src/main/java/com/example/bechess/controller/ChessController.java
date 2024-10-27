@@ -56,8 +56,9 @@ public class ChessController {
                 WebSessionID2 = sessionId;
             }
 
-//            if (connectedWebSessions.size() == 2)
+            if (connectedWebSessions.size() == 2) {
                 assignColorsAndStartGame("Web", WebSessionID1, WebSessionID2);
+            }
         }
     }
 
