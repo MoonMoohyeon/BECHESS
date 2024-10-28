@@ -89,27 +89,46 @@ public class VRController extends TextWebSocketHandler {
             // Create Move object
             Move moveObj = new Move(eventTime, from, to, color, type);
 
-            if(!gameState.processMoveVR(moveObj)) {
+            if (!gameState.processMoveVR(moveObj)) {
                 log.info("invalidMove");
                 session.sendMessage(new TextMessage("invalidMove"));
-            }
-            else {
+            } else {
                 log.info("validMove");
                 session.sendMessage(new TextMessage("validMove"));
+
+                if (gameState.isCheckmated()) {
+                    messagingTemplate.convertAndSend("topic/Web", "gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
+                    connectedVRSessions.get(0).sendMessage(new TextMessage("gameOver" + gameState.getCurrentPlayer() + "lose by checkmate"));
+                    connectedVRSessions.get(1).sendMessage(new TextMessage("gameOver" + gameState.getCurrentPlayer() + "lose by checkmate"));
+                    gameState.setCheckmated(false);
+                } else if (gameState.getPromotion() != null) {
+                    messagingTemplate.convertAndSend("topic/Web", "promotion " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
+                    connectedVRSessions.get(0).sendMessage(new TextMessage("promotion " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY()));
+                    connectedVRSessions.get(1).sendMessage(new TextMessage("promotion " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY()));
+                    gameState.setPromotion(null);
+                } else if (gameState.getCastledRook() != null) {
+                    messagingTemplate.convertAndSend("topic/Web", "castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
+                    connectedVRSessions.get(0).sendMessage(new TextMessage("castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY()));
+                    connectedVRSessions.get(1).sendMessage(new TextMessage("castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY()));
+                    gameState.setCastledRook(null);
+                } else if (gameState.getEnPassantTarget() != null) {
+                    messagingTemplate.convertAndSend("topic/Web", "enpassant " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
+                    connectedVRSessions.get(0).sendMessage(new TextMessage("enpassant " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY()));
+                    connectedVRSessions.get(1).sendMessage(new TextMessage("enpassant " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY()));
+                    gameState.setEnPassantTarget(null);
+                }
             }
         }
         else if(jsonNode.findValue("battle") != null) {
 
         }
 
-        // 응답 JSON 작성
-        JsonNode responseNode = objectMapper.createObjectNode()
-                .put("response", "Echo")
-                .set("original", jsonNode);
+//        JsonNode responseNode = objectMapper.createObjectNode()
+//                .put("response", "Echo")
+//                .set("original", jsonNode);
 
-        // JSON 응답을 문자열로 변환하여 전송
-        String jsonResponse = objectMapper.writeValueAsString(responseNode);
-        session.sendMessage(new TextMessage(jsonResponse));
+//        String jsonResponse = objectMapper.writeValueAsString(responseNode);
+//        session.sendMessage(new TextMessage(jsonResponse));
     }
 
     // 웹소켓 연결이 닫힐 때 호출
