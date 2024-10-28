@@ -123,15 +123,15 @@ public class ChessController {
             messagingTemplate.convertAndSend("topic/Web", "gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
         }
         else if(gameState.getPromotion() != null) {
-            messagingTemplate.convertAndSend("topic/Web", "promotion " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
+            messagingTemplate.convertAndSend("topic/Web", "promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
             gameState.setPromotion(null);
         }
         else if(gameState.getCastledRook() != null) {
-            messagingTemplate.convertAndSend("topic/Web", "castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
+            messagingTemplate.convertAndSend("topic/Web", "castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
             gameState.setCastledRook(null);
         }
         else if(gameState.getEnPassantTarget() != null) {
-            messagingTemplate.convertAndSend("topic/Web", "enpassant " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
+            messagingTemplate.convertAndSend("topic/Web", "enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
             gameState.setEnPassantTarget(null);
         }
 
