@@ -1,7 +1,10 @@
 package com.example.bechess.controller;
 
 import com.example.bechess.dto.Position;
+import com.example.bechess.dto.controlData;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.example.bechess.dto.Move;
@@ -22,24 +25,22 @@ import java.io.IOException;
 import java.util.*;
 
 @Controller
+@Getter
+@Setter
 public class ChessController {
-
-    private GameState gameState = new GameState();
-    private Set<String> connectedWebSessions = Collections.synchronizedSet(new HashSet<>());
-    private Set<String> connectedVRSessions = Collections.synchronizedSet(new HashSet<>());
-
-    private static final Logger log = LoggerFactory.getLogger(ChessController.class);
-
-
-    private String WebSessionID1 = null;
-    private String WebSessionID2 = null;
-    private String VRSessionID1 = null;
-    private String VRSessionID2 = null;
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
     @Autowired
     private ObjectMapper objectMapper;
+    private static final Logger log = LoggerFactory.getLogger(ChessController.class);
+
+    private controlData controlData = new controlData();
+    private GameState gameState = controlData.getGameState();
+    private Set<String> connectedWebSessions = Collections.synchronizedSet(new HashSet<>());
+
+    private String WebSessionID1 = null;
+    private String WebSessionID2 = null;
 
     @MessageMapping("/Web/join")
     public void Webjoin(SimpMessageHeaderAccessor headerAccessor) throws IOException {
@@ -52,35 +53,15 @@ public class ChessController {
 
             if (WebSessionID1 == null) {
                 WebSessionID1 = sessionId;
+                controlData.setConnectedWeb(1);
             } else if (WebSessionID2 == null) {
                 WebSessionID2 = sessionId;
+                controlData.setConnectedWeb(2);
             }
 
-            if (connectedWebSessions.size() == 2) {
-                assignColorsAndStartGame("Web", WebSessionID1, WebSessionID2);
-            }
-        }
-    }
-
-    @MessageMapping("/VR/join")
-    public void VRjoin(SimpMessageHeaderAccessor headerAccessor) throws IOException {
-        String sessionId = headerAccessor.getSessionId();
-        messagingTemplate.convertAndSend("/topic/VR", "connected");
-        if (connectedVRSessions.size() > 1) {
-            log.info("세션 거부됨.");
-        } else if (sessionId != null) {
-            connectedVRSessions.add(sessionId);
-            log.info("세션 [ {} ] 연결됨", sessionId);
-
-            if (VRSessionID1 == null) {
-                VRSessionID1 = sessionId;
-            } else if (VRSessionID2 == null) {
-                VRSessionID2 = sessionId;
-            }
-
-            if (connectedVRSessions.size() == 2) {
-                assignColorsAndStartGame("VR", VRSessionID1, VRSessionID2);
-            }
+//            if (connectedWebSessions.size() == 2 && controlData.getConnectedVR() == 2) {
+                messagingTemplate.convertAndSend("/topic/Web", "gameStart");
+//            }
         }
     }
 
@@ -88,7 +69,6 @@ public class ChessController {
     public String handleTimeUp(String message) {
         System.out.println("Received time up message: " + message);
         messagingTemplate.convertAndSend("/topic/Web", "gameOver " + message + " lose by timeover");
-        messagingTemplate.convertAndSend("/topic/VR", "gameOver " + message + " lose by timeover");
         return message;
     }
 
@@ -131,45 +111,6 @@ public class ChessController {
         }
     }
 
-    @MessageMapping("/VR/move")
-    public void handleMoveVR(@Payload Map<String, Object> move) {
-        log.info("Move received: eventTime={}, from={}, to={}, color={}",
-                move.get("eventTime"), move.get("from"), move.get("to"), move.get("color"));
-
-        try {
-            // Extract values from the map and cast to appropriate types
-            String eventTime = (String) move.get("eventTime");
-
-            // Extract and convert 'from' position
-            String fromJson = objectMapper.writeValueAsString(move.get("from"));
-            Position from = objectMapper.readValue(fromJson, Position.class);
-
-            // Extract and convert 'to' position
-            String toJson = objectMapper.writeValueAsString(move.get("to"));
-            Position to = objectMapper.readValue(toJson, Position.class);
-
-            // Extract and convert 'player' information
-            String color = (String) (move.get("color"));
-
-            // Extract and convert 'type' information
-            String type = (String) move.get("type");
-
-            // Create Move object
-            Move moveObj = new Move(eventTime, from, to, color, type);
-
-            if(!gameState.processMoveVR(moveObj)) {
-                log.info("invalidMove");
-                messagingTemplate.convertAndSend("/topic/VR", "invalidMove");
-            }
-            else {
-                getGameState(moveObj);
-            }
-
-        } catch (Exception e) {
-            log.error("Error parsing move message", e);
-        }
-    }
-
     @GetMapping("/state")
     public GameState getGameState(Move moveObj) {
         messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
@@ -180,21 +121,17 @@ public class ChessController {
 
         if(gameState.isCheckmated()) {
             messagingTemplate.convertAndSend("topic/Web", "gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
-            messagingTemplate.convertAndSend("topic/VR", "gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
         }
         else if(gameState.getPromotion() != null) {
             messagingTemplate.convertAndSend("topic/Web", "promotion " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
-            messagingTemplate.convertAndSend("topic/VR", "promotion " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
             gameState.setPromotion(null);
         }
         else if(gameState.getCastledRook() != null) {
             messagingTemplate.convertAndSend("topic/Web", "castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
-            messagingTemplate.convertAndSend("topic/VR", "castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
             gameState.setCastledRook(null);
         }
         else if(gameState.getEnPassantTarget() != null) {
             messagingTemplate.convertAndSend("topic/Web", "enpassant " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
-            messagingTemplate.convertAndSend("topic/VR", "enpassant " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
             gameState.setEnPassantTarget(null);
         }
 
@@ -218,27 +155,6 @@ public class ChessController {
             connectedWebSessions.remove(sessionId);
             messagingTemplate.convertAndSend("/topic/Web", "Web Session [ " + sessionId + " ] disconnected");
         }
-
-        // VR disconnect
-        if (connectedVRSessions.contains(sessionId)) {
-            if (sessionId.equals(VRSessionID1)) {
-                log.info("VRSessionID1 [ {} ] disconnected", sessionId);
-                VRSessionID1 = null;
-            } else if (sessionId.equals(VRSessionID2)) {
-                log.info("VRSessionID2 [ {} ] disconnected", sessionId);
-                VRSessionID2 = null;
-            }
-            connectedVRSessions.remove(sessionId);
-            messagingTemplate.convertAndSend("/topic/VR", "VR Session [ " + sessionId + " ] disconnected");
-        }
-    }
-
-    private void broadcastConnectedMessage(String sessionId) {
-        messagingTemplate.convertAndSend("/topic/Web", "sessionId\n" + sessionId + "\n");
-    }
-
-    private void sendMessageToSpecificSession(String sessionId, String message) {
-        messagingTemplate.convertAndSendToUser(sessionId, "/topic/Web", message);
     }
 
     @MessageMapping("/Web/reset")
@@ -247,17 +163,6 @@ public class ChessController {
         gameState = new GameState();
         gameState.initializeBoard();
         messagingTemplate.convertAndSend("/topic/Web", "boardReset");
-        messagingTemplate.convertAndSend("/topic/VR", "boardReset");
         return gameState;
-    }
-
-    private void assignColorsAndStartGame(String platform, String sessionID1, String sessionID2) {
-//        Random random = new Random();
-//        boolean assignW = random.nextBoolean();
-//        String color1 = assignW ? "w" : "b";
-//        String color2 = color1.equals("w") ? "b" : "w";
-//        messagingTemplate.convertAndSend("/topic/" + platform, "sessionID : " + sessionID1 + " color : " + color1);
-//        messagingTemplate.convertAndSend("/topic/" + platform, "sessionID : " + sessionID2 + " color : " + color2);
-        messagingTemplate.convertAndSend("/topic/" + platform, "gameStart");
     }
 }
