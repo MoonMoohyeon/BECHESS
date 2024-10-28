@@ -1,7 +1,10 @@
 package com.example.bechess.controller;
 
+import com.example.bechess.dto.Move;
+import com.example.bechess.dto.Position;
 import com.example.bechess.dto.controlData;
 import com.example.bechess.service.GameState;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.Setter;
@@ -65,8 +68,48 @@ public class VRController extends TextWebSocketHandler {
     // 클라이언트로부터 메시지 수신 시 호출
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        System.out.println("Received message: " + message.getPayload());
-        session.sendMessage(new TextMessage("Echo: " + message.getPayload()));  // 받은 메시지 그대로 반환
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        // 메시지를 JSON으로 파싱
+        JsonNode jsonNode = objectMapper.readTree(message.getPayload());
+        System.out.println("Received JSON message: " + jsonNode.toString());
+
+        if(jsonNode.findValue("move") != null) {
+            log.info("Move received: eventTime={}, from={}, to={}, color={}",
+                    jsonNode.get("eventTime"), jsonNode.get("from"), jsonNode.get("to"), jsonNode.get("color"));
+
+            String eventTime = String.valueOf(jsonNode.get("eventTime"));
+            String fromJson = objectMapper.writeValueAsString(jsonNode.get("from"));
+            Position from = objectMapper.readValue(fromJson, Position.class);
+            String toJson = objectMapper.writeValueAsString(jsonNode.get("to"));
+            Position to = objectMapper.readValue(toJson, Position.class);
+            String color = String.valueOf(jsonNode.get("color"));
+            String type = String.valueOf(jsonNode.get("type"));
+
+            // Create Move object
+            Move moveObj = new Move(eventTime, from, to, color, type);
+
+            if(!gameState.processMoveVR(moveObj)) {
+                log.info("invalidMove");
+                session.sendMessage(new TextMessage("invalidMove"));
+            }
+            else {
+                log.info("validMove");
+                session.sendMessage(new TextMessage("validMove"));
+            }
+        }
+        else if(jsonNode.findValue("battle") != null) {
+
+        }
+
+        // 응답 JSON 작성
+        JsonNode responseNode = objectMapper.createObjectNode()
+                .put("response", "Echo")
+                .set("original", jsonNode);
+
+        // JSON 응답을 문자열로 변환하여 전송
+        String jsonResponse = objectMapper.writeValueAsString(responseNode);
+        session.sendMessage(new TextMessage(jsonResponse));
     }
 
     // 웹소켓 연결이 닫힐 때 호출
