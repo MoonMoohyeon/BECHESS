@@ -103,39 +103,48 @@ public class ChessController {
                 messagingTemplate.convertAndSend("/topic/Web", "invalidMove");
             }
             else {
-                getGameState(moveObj);
+                gameState = controlData.getGameState();
+
+                if(gameState.isCheckmated()) {
+                    messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
+                            "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
+                            " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
+                            " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
+                            " gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
+
+                    log.info("checkmated");
+                }
+                else if(gameState.getPromotion() != null) {
+                    messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
+                            "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
+                            " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
+                            " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
+                            " promotion : " + gameState.getPromotion().getX() + ", " + gameState.getPromotion().getY());
+                    log.info("promotion");
+                    gameState.setPromotion(null);
+                }
+                else if(gameState.getCastledRook() != null) {
+                    messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
+                            "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
+                            " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
+                            " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
+                            " castle : " + gameState.getCastledRook().getX() + ", " + gameState.getCastledRook().getY());
+                    log.info("castledRook");
+                    gameState.setCastledRook(null);
+                }
+                else {
+                    messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
+                            "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
+                            " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
+                            " color : " + moveObj.getColor() + " type : " + moveObj.getType());
+//                + "\n" + gameState.getBoardState());
+                    log.info("else");
+                }
             }
 
         } catch (Exception e) {
             log.error("Error parsing move message", e);
         }
-    }
-
-    @GetMapping("/state")
-    public GameState getGameState(Move moveObj) {
-        messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
-                "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
-                " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
-                " color : " + moveObj.getColor() + " type : " + moveObj.getType());
-//                + "\n" + gameState.getBoardState());
-
-        if(gameState.isCheckmated()) {
-            messagingTemplate.convertAndSend("topic/Web", "gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
-        }
-        else if(gameState.getPromotion() != null) {
-            messagingTemplate.convertAndSend("topic/Web", "promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
-            gameState.setPromotion(null);
-        }
-        else if(gameState.getCastledRook() != null) {
-            messagingTemplate.convertAndSend("topic/Web", "castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
-            gameState.setCastledRook(null);
-        }
-        else if(gameState.getEnPassantTarget() != null) {
-            messagingTemplate.convertAndSend("topic/Web", "enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
-            gameState.setEnPassantTarget(null);
-        }
-
-        return gameState;
     }
 
     @EventListener

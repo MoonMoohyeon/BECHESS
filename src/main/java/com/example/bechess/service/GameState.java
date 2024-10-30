@@ -48,7 +48,7 @@ public class GameState {
         this.whiteRook2Moved = false;
         this.blackRook1Moved = false;
         this.blackRook2Moved = false;
-        this.enPassantTarget = null;
+        this.enPassantTarget = new Position(0, 0);
         this.enPassantTargetColor = null;
 
         this.moveHistory = new Stack<>();
@@ -73,24 +73,10 @@ public class GameState {
             Webmove = move;
 
             ChessPiece movedPiece = board.get(move.getFrom());
-            ChessPiece capturedPiece = board.get(move.getTo());
-//
-//        moveHistory.push(new PreviousMove(
-//                move.getFrom(),
-//                move.getTo(),
-//                movedPiece,
-//                capturedPiece,
-//                whiteKingMoved,
-//                blackKingMoved,
-//                whiteRook1Moved,
-//                whiteRook2Moved,
-//                blackRook1Moved,
-//                blackRook2Moved,
-//                enPassantTarget
-//        ));
+//            ChessPiece capturedPiece = board.get(move.getTo());
 
             Position to = move.getTo();
-            Position from = move.getFrom();
+//            Position from = move.getFrom();
 
             if (movedPiece == null || !movedPiece.getColor().equals(currentPlayer)) {
                 return false; // 기물이 없거나 상대 기물인 경우
@@ -195,10 +181,10 @@ public class GameState {
         }
 
         // 앙파상으로 상대 폰을 잡은 경우 처리
-        if (piece.getType().equals("PAWN") && move.getTo().equals(enPassantTarget)) {
-            Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
-            board.remove(capturePosition);  // 앙파상으로 잡힌 폰을 제거
-        }
+//        if (piece.getType().equals("PAWN") && move.getTo().equals(enPassantTarget)) {
+//            Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
+//            board.remove(capturePosition);  // 앙파상으로 잡힌 폰을 제거
+//        }
 
         // 새로운 위치에 기물 배치
         board.put(move.getTo(), piece);
@@ -296,10 +282,13 @@ public class GameState {
             }
 
             // 앙파상으로 상대 폰 잡기
-            if (move.getTo().equals(enPassantTarget) && !move.getColor().equals(enPassantTargetColor)) {
-                Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
-                board.remove(capturePosition);
-                return true;
+            if(enPassantTarget != null) {
+                log.info("enpassant : " + enPassantTarget.getX() + ", " + enPassantTarget.getY() + enPassantTargetColor);
+                if (move.getTo().getX() == enPassantTarget.getX() && move.getTo().getY() == enPassantTarget.getY() && move.getColor() == enPassantTargetColor) {
+                    Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
+                    board.remove(capturePosition);
+                    return true;
+                }
             }
 
             return false;
@@ -431,8 +420,6 @@ public class GameState {
                 if (Math.abs(move.getFrom().getY() - move.getTo().getY()) == 2) {
                     enPassantTarget = new Position(move.getTo().getX(), (move.getFrom().getY() + move.getTo().getY()) / 2);
                     enPassantTargetColor = move.getColor();
-                } else {
-                    enPassantTarget = null;
                 }
                             // 프로모션 처리 (디폴트로 퀸으로 프로모션)
 //                if ((move.getTo().getY() == 7 && piece.getColor().equals("WHITE")) || (move.getTo().getY() == 0 && piece.getColor().equals("BLACK"))) {
@@ -468,7 +455,6 @@ public class GameState {
 
         // 현재 플레이어의 킹이 공격받는지 확인
         if (!isKingUnderAttack(currentPlayer)) {
-            log.info("return false1");
             return false; // 킹이 공격받지 않는다면 체크메이트가 아님
         }
 
@@ -487,7 +473,6 @@ public class GameState {
             undoLastMove();
 
             if (kingIsSafe) {
-                log.info("return false2");
                 return false; // 킹이 피할 수 있는 위치가 하나라도 있다면 체크메이트 아님
             }
         }
@@ -510,7 +495,6 @@ public class GameState {
 
                     if (kingIsSafe) {
                         log.info("tox : " + to.getX() + "toy: " + to.getY() + " " + piece.getType() + piece.getPosition().getX() + piece.getPosition().getY());
-                        log.info("return false3");
                         return false; // 킹이 체크를 피할 수 있다면 체크메이트 아님
                     }
                 }
