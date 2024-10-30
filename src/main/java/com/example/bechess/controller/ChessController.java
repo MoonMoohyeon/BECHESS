@@ -132,6 +132,15 @@ public class ChessController {
                     log.info("castledRook");
                     gameState.setCastledRook(null);
                 }
+                else if(gameState.isEnpassantMoved()) {
+                    messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
+                            "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
+                            " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
+                            " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
+                            " enpassant : " + gameState.getEnPassantTarget().getX() + ", " + gameState.getEnPassantTarget().getY());
+                    log.info("enpassanttarget");
+                    gameState.setEnpassantMoved(false);
+                }
                 else {
                     messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
                             "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +

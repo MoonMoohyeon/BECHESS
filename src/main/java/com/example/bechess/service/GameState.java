@@ -35,6 +35,7 @@ public class GameState {
     private Move VRmove;
 
     private boolean checkmated;
+    private boolean enpassantMoved;
     private Position castledRook;
     private Position promotion;
 
@@ -48,13 +49,14 @@ public class GameState {
         this.whiteRook2Moved = false;
         this.blackRook1Moved = false;
         this.blackRook2Moved = false;
-        this.enPassantTarget = new Position(0, 0);
+        this.enPassantTarget = null;
         this.enPassantTargetColor = null;
 
         this.moveHistory = new Stack<>();
         this.Webmove = null;
         this.VRmove = null;
         this.checkmated = false;
+        this.enpassantMoved = false;
         this.castledRook = null;
         this.promotion = null;
          initializeBoard();
@@ -89,9 +91,9 @@ public class GameState {
 
             if (isValidMove(move, board)) {
 
-                updateBoard(move);
+                updateBoard(move, board);
 
-                if (isKingUnderAttack(currentPlayer)) {
+                if (isKingUnderAttack(currentPlayer, board)) {
                     undoLastMove();
                     return false; // 킹이 체크 상태에 빠지는 이동은 유효하지 않음
                 }
@@ -117,7 +119,7 @@ public class GameState {
                 return true;
             }
             if (isValidMove(move, board)) {
-                updateBoard(move);
+                updateBoard(move, board);
                 switchPlayer();
                 if(move.getColor().equals("BLACK")) {
                     switchTurn();
@@ -132,7 +134,7 @@ public class GameState {
         return false;
     }
 
-    public void updateBoard(Move move) {
+    public void updateBoard(Move move, Map<Position, ChessPiece> board) {
 
         ChessPiece movedPiece = board.get(move.getFrom());
         ChessPiece capturedPiece = board.get(move.getTo());
@@ -150,6 +152,50 @@ public class GameState {
                 blackRook2Moved,
                 enPassantTarget
         ));
+
+        // 이동할 기물을 가져옴
+        ChessPiece piece = board.get(move.getFrom());
+        if (piece == null) {
+            log.error("이동하려는 위치에 기물이 없습니다.");
+            return;
+        }
+
+        // 특수 이동 처리 (캐슬링, 앙파상, 프로모션 등)
+        handleSpecialMoves(move, piece);
+
+        // 프로모션 처리
+        if (piece.getType().equals("PAWN") &&
+                (move.getTo().getY() == 7 || move.getTo().getY() == 0)) {
+            log.info("promotion : " + piece.getType());
+            piece.setType("QUEEN");  // 기본적으로 퀸으로 프로모션
+            promotion = move.getTo();
+        }
+
+        // 기물의 위치 업데이트
+        piece.setPosition(move.getTo());
+
+        // 원래 위치에서 기물 제거
+        board.remove(move.getFrom());
+
+        // 기물 잡기 처리
+        if (board.containsKey(move.getTo()) && board.get(move.getTo()) != piece) {
+            board.remove(move.getTo());
+        }
+
+        // 앙파상으로 상대 폰을 잡은 경우 처리
+//        if (piece.getType().equals("PAWN") && move.getTo().equals(enPassantTarget)) {
+//            Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
+//            board.remove(capturePosition);  // 앙파상으로 잡힌 폰을 제거
+//        }
+
+        // 새로운 위치에 기물 배치
+        board.put(move.getTo(), piece);
+    }
+
+    public void simulateBoard(Move move, Map<Position, ChessPiece> board) {
+
+        ChessPiece movedPiece = board.get(move.getFrom());
+        ChessPiece capturedPiece = board.get(move.getTo());
 
         // 이동할 기물을 가져옴
         ChessPiece piece = board.get(move.getFrom());
@@ -284,7 +330,8 @@ public class GameState {
             // 앙파상으로 상대 폰 잡기
             if(enPassantTarget != null) {
                 log.info("enpassant : " + enPassantTarget.getX() + ", " + enPassantTarget.getY() + enPassantTargetColor);
-                if (move.getTo().getX() == enPassantTarget.getX() && move.getTo().getY() == enPassantTarget.getY() && move.getColor() == enPassantTargetColor) {
+                if (move.getTo().getX() == enPassantTarget.getX() && move.getTo().getY() == enPassantTarget.getY() && move.getColor() != enPassantTargetColor) {
+                    enpassantMoved = true;
                     Position capturePosition = new Position(move.getTo().getX(), move.getFrom().getY());
                     board.remove(capturePosition);
                     return true;
@@ -454,7 +501,7 @@ public class GameState {
         Position kingPosition = findKingPosition(currentPlayer, board);
 
         // 현재 플레이어의 킹이 공격받는지 확인
-        if (!isKingUnderAttack(currentPlayer)) {
+        if (!isKingUnderAttack(currentPlayer, board)) {
             return false; // 킹이 공격받지 않는다면 체크메이트가 아님
         }
 
@@ -466,11 +513,11 @@ public class GameState {
 
             log.info("possible king moves : " + move.getX() + move.getY());
             Move tempmove = new Move(kingPosition, move);
-            updateBoard(tempmove);
+            Map<Position, ChessPiece> tempboard = board;
+            simulateBoard(tempmove, tempboard);
 
             // 이동 후 공격받는지 확인
-            boolean kingIsSafe = !isKingUnderAttack(currentPlayer);
-            undoLastMove();
+            boolean kingIsSafe = !isKingUnderAttack(currentPlayer, tempboard);
 
             if (kingIsSafe) {
                 return false; // 킹이 피할 수 있는 위치가 하나라도 있다면 체크메이트 아님
@@ -488,10 +535,10 @@ public class GameState {
                 for (Position to : legalMoves) {
                     log.info("possible legal moves : " + to.getX() + to.getY() + " " + piece.getType());
                     Move tempmove = new Move(piece.getPosition(), to);
-                    updateBoard(tempmove);
+                    Map<Position, ChessPiece> tempboard = board;
+                    simulateBoard(tempmove, tempboard);
 
-                    boolean kingIsSafe = !isKingUnderAttack(currentPlayer);
-                    undoLastMove();
+                    boolean kingIsSafe = !isKingUnderAttack(currentPlayer, tempboard);
 
                     if (kingIsSafe) {
                         log.info("tox : " + to.getX() + "toy: " + to.getY() + " " + piece.getType() + piece.getPosition().getX() + piece.getPosition().getY());
@@ -569,7 +616,7 @@ public class GameState {
         throw new IllegalStateException("킹이 존재하지 않습니다.");  // 킹이 반드시 존재해야 함
     }
 
-    public boolean isKingUnderAttack(String kingcolor) {
+    public boolean isKingUnderAttack(String kingcolor, Map<Position, ChessPiece> board) {
         Position kingPosition = findKingPosition(kingcolor, board);
         for (Map.Entry<Position, ChessPiece> entry : board.entrySet()) {
             ChessPiece piece = entry.getValue();
