@@ -68,6 +68,7 @@ public class VRController extends TextWebSocketHandler {
     // 클라이언트로부터 메시지 수신 시 호출
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        gameState = controlData.getGameState();
         ObjectMapper objectMapper = new ObjectMapper();
 
         // 메시지를 JSON으로 파싱

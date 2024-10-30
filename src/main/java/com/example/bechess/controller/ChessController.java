@@ -119,7 +119,7 @@ public class ChessController {
                             "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
                             " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
                             " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
-                            " promotion : " + gameState.getPromotion().getX() + ", " + gameState.getPromotion().getY());
+                            " promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
                     log.info("promotion");
                     gameState.setPromotion(null);
                 }
@@ -128,7 +128,7 @@ public class ChessController {
                             "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
                             " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
                             " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
-                            " castle : " + gameState.getCastledRook().getX() + ", " + gameState.getCastledRook().getY());
+                            " castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
                     log.info("castledRook");
                     gameState.setCastledRook(null);
                 }
@@ -137,7 +137,7 @@ public class ChessController {
                             "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
                             " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
                             " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
-                            " enpassant : " + gameState.getEnPassantTarget().getX() + ", " + gameState.getEnPassantTarget().getY());
+                            " enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
                     log.info("enpassanttarget");
                     gameState.setEnpassantMoved(false);
                 }
