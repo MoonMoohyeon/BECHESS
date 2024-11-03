@@ -33,8 +33,13 @@ public class VRController extends TextWebSocketHandler {
     private List<WebSocketSession> connectedVRSessions = Collections.synchronizedList(new ArrayList<>());
     private static final Logger log = LoggerFactory.getLogger(ChessController.class);
 
-    private com.example.bechess.dto.controlData controlData = new controlData();
+    private controlData controlData = new controlData();
     private GameState gameState = controlData.getGameState();
+
+    @Autowired
+    public VRController(controlData controlData) {
+        this.controlData = controlData;
+    }
 
     private WebSocketSession VRSessionID1 = null;
     private WebSocketSession VRSessionID2 = null;
@@ -71,65 +76,110 @@ public class VRController extends TextWebSocketHandler {
         gameState = controlData.getGameState();
         ObjectMapper objectMapper = new ObjectMapper();
 
-        // 메시지를 JSON으로 파싱
-        JsonNode jsonNode = objectMapper.readTree(message.getPayload());
-        System.out.println("Received JSON message: " + jsonNode.toString());
+        System.out.println("Received message: " + message.getPayload());
+        session.sendMessage(new TextMessage("Echo: " + message.getPayload()));
 
-        if(jsonNode.findValue("move") != null) {
-            log.info("Move received: eventTime={}, from={}, to={}, color={}",
-                    jsonNode.get("eventTime"), jsonNode.get("from"), jsonNode.get("to"), jsonNode.get("color"));
+        try {
+            String payload = message.getPayload();
+            Move moveData = objectMapper.readValue(payload, Move.class);
 
-            String eventTime = String.valueOf(jsonNode.get("eventTime"));
-            String fromJson = objectMapper.writeValueAsString(jsonNode.get("from"));
-            Position from = objectMapper.readValue(fromJson, Position.class);
-            String toJson = objectMapper.writeValueAsString(jsonNode.get("to"));
-            Position to = objectMapper.readValue(toJson, Position.class);
-            String color = String.valueOf(jsonNode.get("color"));
-            String type = String.valueOf(jsonNode.get("type"));
+            // 메시지를 JSON으로 파싱
+            JsonNode jsonNode = objectMapper.readTree(message.getPayload());
+            System.out.println("Received JSON message: " + jsonNode.toString());
 
-            // Create Move object
-            Move moveObj = new Move(eventTime, from, to, color, type);
+            if (jsonNode.findValue("move") != null) {
+                log.info("Move received: from={}, to={}, color={}, type={}, battle={}",
+                        jsonNode.get("from"), jsonNode.get("to"), jsonNode.get("color"), jsonNode.get("type"), jsonNode.get("battle"));
 
-            if (!gameState.processMoveVR(moveObj)) {
-                log.info("invalidMove");
-                session.sendMessage(new TextMessage("invalidMove"));
-            } else {
-                log.info("validMove");
-                session.sendMessage(new TextMessage("validMove"));
+                String fromJson = objectMapper.writeValueAsString(jsonNode.get("from"));
+                Position from = objectMapper.readValue(fromJson, Position.class);
+                String toJson = objectMapper.writeValueAsString(jsonNode.get("to"));
+                Position to = objectMapper.readValue(toJson, Position.class);
+                String color = String.valueOf(jsonNode.get("color"));
+                String type = String.valueOf(jsonNode.get("type"));
+                String battle = String.valueOf(jsonNode.get("battle"));
+                String special = "";
 
-                if (gameState.isCheckmated()) {
-                    messagingTemplate.convertAndSend("topic/Web", "gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
-                    connectedVRSessions.get(0).sendMessage(new TextMessage("gameOver" + gameState.getCurrentPlayer() + "lose by checkmate"));
-                    connectedVRSessions.get(1).sendMessage(new TextMessage("gameOver" + gameState.getCurrentPlayer() + "lose by checkmate"));
-                    gameState.setCheckmated(false);
-                } else if (gameState.getPromotion() != null) {
-                    messagingTemplate.convertAndSend("topic/Web", "promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
-                    connectedVRSessions.get(0).sendMessage(new TextMessage("promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY()));
-                    connectedVRSessions.get(1).sendMessage(new TextMessage("promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY()));
-                    gameState.setPromotion(null);
-                } else if (gameState.getCastledRook() != null) {
-                    messagingTemplate.convertAndSend("topic/Web", "castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
-                    connectedVRSessions.get(0).sendMessage(new TextMessage("castle :  " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY()));
-                    connectedVRSessions.get(1).sendMessage(new TextMessage("castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY()));
-                    gameState.setCastledRook(null);
-                } else if (gameState.getEnPassantTarget() != null) {
-                    messagingTemplate.convertAndSend("topic/Web", "enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
-                    connectedVRSessions.get(0).sendMessage(new TextMessage("enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY()));
-                    connectedVRSessions.get(1).sendMessage(new TextMessage("enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY()));
-                    gameState.setEnPassantTarget(null);
+                // Create Move object
+                Move moveObj = new Move(from, to, color, type);
+
+                if (!gameState.processMoveVR(moveObj)) {
+                    log.info("invalidMove");
+                    session.sendMessage(new TextMessage("invalidMove"));
+                } else {
+                    log.info("validMove");
+
+                    messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
+                            "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
+                            " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
+                            " color : " + moveObj.getColor() + " type : " + moveObj.getType());
+
+                    connectedVRSessions.get(0).sendMessage(new TextMessage("validMove"));
+                    connectedVRSessions.get(1).sendMessage(new TextMessage("validMove"));
+
+                    if (gameState.isCheckmated()) {
+                        messagingTemplate.convertAndSend("topic/Web", "gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
+
+                        special = "gameover";
+                        moveObj = new Move(from, to, color, type, special);
+                        String jsonPayload = objectMapper.writeValueAsString(moveObj);
+                        controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+                        controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+
+//                        connectedVRSessions.get(0).sendMessage(new TextMessage("gameOver" + gameState.getCurrentPlayer() + "lose by checkmate"));
+//                        connectedVRSessions.get(1).sendMessage(new TextMessage("gameOver" + gameState.getCurrentPlayer() + "lose by checkmate"));
+                        gameState.setCheckmated(false);
+                    } else if (gameState.getPromotion() != null) {
+                        messagingTemplate.convertAndSend("topic/Web", "promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
+
+                        special = "promotion" + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY();
+                        moveObj = new Move(from, to, color, type, special);
+                        String jsonPayload = objectMapper.writeValueAsString(moveObj);
+                        controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+                        controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+
+                        connectedVRSessions.get(0).sendMessage(new TextMessage("promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY()));
+                        connectedVRSessions.get(1).sendMessage(new TextMessage("promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY()));
+                        gameState.setPromotion(null);
+                    } else if (gameState.getCastledRook() != null) {
+                        messagingTemplate.convertAndSend("topic/Web", "castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
+
+                        special = "castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY();
+                        moveObj = new Move(from, to, color, type, special);
+                        String jsonPayload = objectMapper.writeValueAsString(moveObj);
+                        controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+                        controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+
+                        connectedVRSessions.get(0).sendMessage(new TextMessage("castle :  " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY()));
+                        connectedVRSessions.get(1).sendMessage(new TextMessage("castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY()));
+                        gameState.setCastledRook(null);
+                    } else if (gameState.getEnPassantTarget() != null) {
+                        messagingTemplate.convertAndSend("topic/Web", "enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
+
+                        special = "enpassant" + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY();
+                        moveObj = new Move(from, to, color, type, special);
+                        String jsonPayload = objectMapper.writeValueAsString(moveObj);
+                        controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+                        controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+
+                        connectedVRSessions.get(0).sendMessage(new TextMessage("enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY()));
+                        connectedVRSessions.get(1).sendMessage(new TextMessage("enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY()));
+                        gameState.setEnPassantTarget(null);
+                    }
                 }
+            } else if (jsonNode.findValue("battle") != null) {
+
             }
+
+            JsonNode responseNode = objectMapper.createObjectNode()
+                    .put("response", "Echo")
+                    .set("original", jsonNode);
+
+            String jsonResponse = objectMapper.writeValueAsString(responseNode);
+            session.sendMessage(new TextMessage(jsonResponse));
+        } catch (Exception e) {
+            log.error("Error parsing move message", e);
         }
-        else if(jsonNode.findValue("battle") != null) {
-
-        }
-
-//        JsonNode responseNode = objectMapper.createObjectNode()
-//                .put("response", "Echo")
-//                .set("original", jsonNode);
-
-//        String jsonResponse = objectMapper.writeValueAsString(responseNode);
-//        session.sendMessage(new TextMessage(jsonResponse));
     }
 
     // 웹소켓 연결이 닫힐 때 호출

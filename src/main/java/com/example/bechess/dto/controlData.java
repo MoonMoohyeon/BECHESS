@@ -3,7 +3,12 @@ package com.example.bechess.dto;
 import com.example.bechess.service.GameState;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.WebSocketSession;
 
+import java.util.*;
+
+@Component
 @Getter
 @Setter
 public class controlData {
@@ -11,6 +16,9 @@ public class controlData {
 
     private int connectedWeb = 0;
     private int connectedVR = 0;
+
+    private Set<String> connectedWebSessions = Collections.synchronizedSet(new HashSet<>());
+    private List<WebSocketSession> connectedVRSessions = Collections.synchronizedList(new ArrayList<>());
 
     private String turn = "";
     private String role = "";

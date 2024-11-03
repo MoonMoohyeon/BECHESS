@@ -18,6 +18,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.context.event.EventListener;
 
@@ -38,6 +39,11 @@ public class ChessController {
     private controlData controlData = new controlData();
     private GameState gameState = controlData.getGameState();
     private Set<String> connectedWebSessions = Collections.synchronizedSet(new HashSet<>());
+
+    @Autowired
+    public ChessController(controlData controlData) {
+        this.controlData = controlData;
+    }
 
     private String WebSessionID1 = null;
     private String WebSessionID2 = null;
@@ -96,7 +102,8 @@ public class ChessController {
             String type = (String) move.get("type");
 
             // Create Move object
-            Move moveObj = new Move(eventTime, from, to, color, type);
+            String special = "";
+            Move moveObj = new Move(eventTime, from, to, color, type, special);
 
             if(!gameState.processMoveWEB(moveObj)) {
                 log.info("invalidMove");
@@ -105,12 +112,21 @@ public class ChessController {
             else {
                 gameState = controlData.getGameState();
 
+                moveObj = new Move(eventTime, from, to, color, type, special);
+                String jsonPayload = objectMapper.writeValueAsString(moveObj);
+
                 if(gameState.isCheckmated()) {
                     messagingTemplate.convertAndSend("/topic/Web", "validMove\n" +
                             "from : " + moveObj.getFrom().getX() + "," + moveObj.getFrom().getY() +
                             " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
                             " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
                             " gameOver " + gameState.getCurrentPlayer() + "lose by checkmated");
+
+                    special = "gameover";
+                    moveObj = new Move(eventTime, from, to, color, type, special);
+                    jsonPayload = objectMapper.writeValueAsString(moveObj);
+                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
                     log.info("checkmated");
                 }
@@ -120,6 +136,13 @@ public class ChessController {
                             " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
                             " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
                             " promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY());
+
+                    special = "promotion" + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY();
+                    moveObj = new Move(eventTime, from, to, color, type, special);
+                    jsonPayload = objectMapper.writeValueAsString(moveObj);
+                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+
                     log.info("promotion");
                     gameState.setPromotion(null);
                 }
@@ -129,6 +152,13 @@ public class ChessController {
                             " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
                             " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
                             " castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
+
+                    special = "castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY();
+                    moveObj = new Move(eventTime, from, to, color, type, special);
+                    jsonPayload = objectMapper.writeValueAsString(moveObj);
+                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+
                     log.info("castledRook");
                     gameState.setCastledRook(null);
                 }
@@ -138,6 +168,13 @@ public class ChessController {
                             " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
                             " color : " + moveObj.getColor() + " type : " + moveObj.getType() +
                             " enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
+
+                    special = "enpassant" + gameState.getEnPassantTarget().getX() + "," + gameState;
+                    moveObj = new Move(eventTime, from, to, color, type, special);
+                    jsonPayload = objectMapper.writeValueAsString(moveObj);
+                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+
                     log.info("enpassanttarget");
                     gameState.setEnpassantMoved(false);
                 }
@@ -147,6 +184,10 @@ public class ChessController {
                             " to : " + moveObj.getTo().getX() + "," + moveObj.getTo().getY() +
                             " color : " + moveObj.getColor() + " type : " + moveObj.getType());
 //                + "\n" + gameState.getBoardState());
+
+                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+
                     log.info("else");
                 }
             }
