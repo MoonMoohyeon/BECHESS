@@ -17,7 +17,6 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.context.event.EventListener;
@@ -206,9 +205,11 @@ public class ChessController {
         if (connectedWebSessions.contains(sessionId)) {
             if (sessionId.equals(WebSessionID1)) {
                 log.info("WebSessionID1 [ {} ] disconnected", sessionId);
+                controlData.setConnectedWeb(controlData.getConnectedWeb() - 1);
                 WebSessionID1 = null;
             } else if (sessionId.equals(WebSessionID2)) {
                 log.info("WebSessionID2 [ {} ] disconnected", sessionId);
+                controlData.setConnectedWeb(controlData.getConnectedWeb() - 1);
                 WebSessionID2 = null;
             }
             connectedWebSessions.remove(sessionId);

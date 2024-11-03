@@ -54,11 +54,13 @@ public class VRController extends TextWebSocketHandler {
             VRSessionID1 = session;
             connectedVRSessions.add(session);
             controlData.setConnectedVR(1);
+            controlData.getConnectedVRSessions().add(session);
         }
         else if(VRSessionID2 == null) {
             VRSessionID2 = session;
             connectedVRSessions.add(session);
             controlData.setConnectedVR(2);
+            controlData.getConnectedVRSessions().add(session);
         }
 
 //        if(connectedVRSessions.size() == 2 && controlData.getConnectedWeb() == 2) {
@@ -188,10 +190,12 @@ public class VRController extends TextWebSocketHandler {
         session.close();
         if(session.getId().equals(VRSessionID1.getId())) {
             VRSessionID1 = null;
+            controlData.getConnectedVRSessions().remove(session);
             connectedVRSessions.remove(session);
         }
         else if(session.getId().equals(VRSessionID2.getId())) {
             VRSessionID2 = null;
+            controlData.getConnectedVRSessions().remove(session);
             connectedVRSessions.remove(session);
         }
         System.out.println("WebSocket connection closed: " + session.getId());
