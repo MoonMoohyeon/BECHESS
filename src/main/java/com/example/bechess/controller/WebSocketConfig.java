@@ -13,11 +13,13 @@ import org.springframework.web.socket.server.support.HttpSessionHandshakeInterce
 public class WebSocketConfig implements WebSocketConfigurer, WebSocketMessageBrokerConfigurer {
 
     private final VRController vrController;
+    private final ChessController chessController;
 
     // VRController를 생성자가 주입받도록 변경
     @Autowired
-    public WebSocketConfig(VRController vrController) {
-        this.vrController = vrController;
+    public WebSocketConfig(controlData controlData) {
+        this.vrController = new VRController(controlData);
+        this.chessController = new ChessController(controlData);
     }
 
     @Override
