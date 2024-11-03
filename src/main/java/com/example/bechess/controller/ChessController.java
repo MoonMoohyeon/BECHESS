@@ -111,6 +111,9 @@ public class ChessController {
             else {
                 gameState = controlData.getGameState();
 
+                VRMessage sendmsg = new VRMessage();
+                sendmsg.setHeader("command");
+
                 moveObj = new Move(eventTime, from, to, color, type, special);
                 String jsonPayload = objectMapper.writeValueAsString(moveObj);
 
@@ -123,7 +126,8 @@ public class ChessController {
 
                     special = "gameover";
                     moveObj = new Move(eventTime, from, to, color, type, special);
-                    jsonPayload = objectMapper.writeValueAsString(moveObj);
+                    sendmsg.setBody(moveObj);
+                    jsonPayload = objectMapper.writeValueAsString(sendmsg);
                     controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
                     controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
@@ -138,7 +142,8 @@ public class ChessController {
 
                     special = "promotion" + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY();
                     moveObj = new Move(eventTime, from, to, color, type, special);
-                    jsonPayload = objectMapper.writeValueAsString(moveObj);
+                    sendmsg.setBody(moveObj);
+                    jsonPayload = objectMapper.writeValueAsString(sendmsg);
                     controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
                     controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
@@ -154,7 +159,8 @@ public class ChessController {
 
                     special = "castle" + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY();
                     moveObj = new Move(eventTime, from, to, color, type, special);
-                    jsonPayload = objectMapper.writeValueAsString(moveObj);
+                    sendmsg.setBody(moveObj);
+                    jsonPayload = objectMapper.writeValueAsString(sendmsg);
                     controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
                     controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
@@ -170,7 +176,8 @@ public class ChessController {
 
                     special = "enpassant" + gameState.getEnPassantTarget().getX() + "," + gameState;
                     moveObj = new Move(eventTime, from, to, color, type, special);
-                    jsonPayload = objectMapper.writeValueAsString(moveObj);
+                    sendmsg.setBody(moveObj);
+                    jsonPayload = objectMapper.writeValueAsString(sendmsg);
                     controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
                     controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
@@ -184,6 +191,8 @@ public class ChessController {
                             " color : " + moveObj.getColor() + " type : " + moveObj.getType());
 //                + "\n" + gameState.getBoardState());
 
+                    sendmsg.setBody(moveObj);
+                    jsonPayload = objectMapper.writeValueAsString(sendmsg);
                     controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
                     controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
