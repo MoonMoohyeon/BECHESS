@@ -40,25 +40,6 @@ public class GameState {
     private Position promotion;
 
     public GameState() {
-        this.board = new HashMap<Position, ChessPiece>();
-        this.currentPlayer = "BLACK";
-        this.currentRole = "COMMANDER";
-        this.whiteKingMoved = false;
-        this.blackKingMoved = false;
-        this.whiteRook1Moved = false;
-        this.whiteRook2Moved = false;
-        this.blackRook1Moved = false;
-        this.blackRook2Moved = false;
-        this.enPassantTarget = null;
-        this.enPassantTargetColor = null;
-
-        this.moveHistory = new Stack<>();
-        this.Webmove = null;
-        this.VRmove = null;
-        this.checkmated = false;
-        this.enpassantMoved = false;
-        this.castledRook = null;
-        this.promotion = null;
          initializeBoard();
     }
 
@@ -775,6 +756,26 @@ public class GameState {
 
 
     public void initializeBoard() {
+
+        this.currentPlayer = "BLACK";
+        this.currentRole = "COMMANDER";
+        this.whiteKingMoved = false;
+        this.blackKingMoved = false;
+        this.whiteRook1Moved = false;
+        this.whiteRook2Moved = false;
+        this.blackRook1Moved = false;
+        this.blackRook2Moved = false;
+        this.enPassantTarget = null;
+        this.enPassantTargetColor = null;
+
+        this.moveHistory = new Stack<>();
+        this.Webmove = null;
+        this.VRmove = null;
+        this.checkmated = false;
+        this.enpassantMoved = false;
+        this.castledRook = null;
+        this.promotion = null;
+
         board = new HashMap<>();
 
         // Initialize all positions to null

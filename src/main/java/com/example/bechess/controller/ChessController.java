@@ -229,7 +229,6 @@ public class ChessController {
     @MessageMapping("/Web/reset")
     @SendTo("/topic/Web")
     public GameState resetGame() {
-        gameState = new GameState();
         gameState.initializeBoard();
         messagingTemplate.convertAndSend("/topic/Web", "boardReset");
         return gameState;
