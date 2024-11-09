@@ -59,13 +59,16 @@ public class ChessController {
             if (WebSessionID1 == null) {
                 WebSessionID1 = sessionId;
                 controlData.setConnectedWeb(1);
+                resetGame();
             } else if (WebSessionID2 == null) {
                 WebSessionID2 = sessionId;
                 controlData.setConnectedWeb(2);
+                resetGame();
             }
 
 //            if (connectedWebSessions.size() == 2 && controlData.getConnectedVR() == 2) {
                 messagingTemplate.convertAndSend("/topic/Web", "gameStart");
+            resetGame();
 //            }
         }
     }
