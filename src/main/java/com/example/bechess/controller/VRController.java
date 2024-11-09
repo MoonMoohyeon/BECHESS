@@ -64,8 +64,8 @@ public class VRController extends TextWebSocketHandler {
         }
 
 //        if(connectedVRSessions.size() == 2 && controlData.getConnectedWeb() == 2) {
-            connectedVRSessions.get(0).sendMessage(new TextMessage("gameStart"));
-            connectedVRSessions.get(1).sendMessage(new TextMessage("gameStart"));
+//            connectedVRSessions.get(0).sendMessage(new TextMessage("gameStart"));
+//            connectedVRSessions.get(1).sendMessage(new TextMessage("gameStart"));
 //        }
 
         System.out.println("New WebSocket connection established: " + session.getId());
@@ -82,14 +82,14 @@ public class VRController extends TextWebSocketHandler {
         session.sendMessage(new TextMessage("Echo: " + message.getPayload()));
 
         try {
-            String payload = message.getPayload();
-            Move moveData = objectMapper.readValue(payload, Move.class);
-
             // 메시지를 JSON으로 파싱
             JsonNode jsonNode = objectMapper.readTree(message.getPayload());
             System.out.println("Received JSON message: " + jsonNode.toString());
 
             if (jsonNode.findValue("move") != null) {
+                String payload = message.getPayload();
+                Move moveData = objectMapper.readValue(payload, Move.class);
+
                 log.info("Move received: from={}, to={}, color={}, type={}, battle={}",
                         jsonNode.get("from"), jsonNode.get("to"), jsonNode.get("color"), jsonNode.get("type"), jsonNode.get("battle"));
 
@@ -105,7 +105,7 @@ public class VRController extends TextWebSocketHandler {
                 // Create Move object
                 Move moveObj = new Move(from, to, color, type);
 
-                if (!gameState.processMoveVR(moveObj)) {
+                if (!gameState.processMoveVR(moveObj, battle)) {
                     log.info("invalidMove");
                     session.sendMessage(new TextMessage("invalidMove"));
                 } else {
@@ -140,8 +140,8 @@ public class VRController extends TextWebSocketHandler {
                         controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
                         controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
-                        connectedVRSessions.get(0).sendMessage(new TextMessage("promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY()));
-                        connectedVRSessions.get(1).sendMessage(new TextMessage("promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY()));
+//                        connectedVRSessions.get(0).sendMessage(new TextMessage("promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY()));
+//                        connectedVRSessions.get(1).sendMessage(new TextMessage("promotion : " + gameState.getPromotion().getX() + "," + gameState.getPromotion().getY()));
                         gameState.setPromotion(null);
                     } else if (gameState.getCastledRook() != null) {
                         messagingTemplate.convertAndSend("topic/Web", "castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY());
@@ -152,8 +152,8 @@ public class VRController extends TextWebSocketHandler {
                         controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
                         controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
-                        connectedVRSessions.get(0).sendMessage(new TextMessage("castle :  " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY()));
-                        connectedVRSessions.get(1).sendMessage(new TextMessage("castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY()));
+//                        connectedVRSessions.get(0).sendMessage(new TextMessage("castle :  " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY()));
+//                        connectedVRSessions.get(1).sendMessage(new TextMessage("castle : " + gameState.getCastledRook().getX() + "," + gameState.getCastledRook().getY()));
                         gameState.setCastledRook(null);
                     } else if (gameState.getEnPassantTarget() != null) {
                         messagingTemplate.convertAndSend("topic/Web", "enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY());
@@ -164,23 +164,23 @@ public class VRController extends TextWebSocketHandler {
                         controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
                         controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
-                        connectedVRSessions.get(0).sendMessage(new TextMessage("enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY()));
-                        connectedVRSessions.get(1).sendMessage(new TextMessage("enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY()));
+//                        connectedVRSessions.get(0).sendMessage(new TextMessage("enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY()));
+//                        connectedVRSessions.get(1).sendMessage(new TextMessage("enpassant : " + gameState.getEnPassantTarget().getX() + "," + gameState.getEnPassantTarget().getY()));
                         gameState.setEnPassantTarget(null);
                     }
                 }
-            } else if (jsonNode.findValue("battle") != null) {
-
             }
 
-            JsonNode responseNode = objectMapper.createObjectNode()
-                    .put("response", "Echo")
-                    .set("original", jsonNode);
+//            JsonNode responseNode = objectMapper.createObjectNode()
+//                    .put("response", "Echo")
+//                    .set("original", jsonNode);
+//            String jsonResponse = objectMapper.writeValueAsString(responseNode);
+//            session.sendMessage(new TextMessage(jsonResponse));
 
-            String jsonResponse = objectMapper.writeValueAsString(responseNode);
-            session.sendMessage(new TextMessage(jsonResponse));
         } catch (Exception e) {
-            log.error("Error parsing move message", e);
+            // JSON 파싱 예외 발생 시, 연결 유지하며 오류 메시지 전송
+            log.error("Error parsing JSON message", e);
+            session.sendMessage(new TextMessage("Invalid message format. Please send a valid JSON."));
         }
     }
 

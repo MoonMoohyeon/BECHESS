@@ -89,9 +89,9 @@ public class GameState {
         return false;
     }
 
-    public boolean processMoveVR(Move move) {
+    public boolean processMoveVR(Move move, String battle) {
 
-        if (currentRole == "ACTOR") {
+        if (currentRole.equals("ACTOR")) {
             VRmove = move;
 
             if (Webmove != VRmove) {
@@ -99,7 +99,11 @@ public class GameState {
             } else {
                 return true;
             }
-            if (isValidMove(move, board)) {
+            if(battle.equals("LOSE")) {
+                // 원래 위치에서 기물 제거
+                board.remove(move.getFrom());
+            }
+            else if (isValidMove(move, board)) {
                 updateBoard(move, board);
                 switchPlayer();
                 if(move.getColor().equals("BLACK")) {
