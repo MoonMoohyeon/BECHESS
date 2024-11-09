@@ -128,8 +128,8 @@ public class ChessController {
                     moveObj = new Move(eventTime, from, to, color, type, special);
                     sendmsg.setBody(moveObj);
                     jsonPayload = objectMapper.writeValueAsString(sendmsg);
-                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
-                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+//                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+//                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
                     log.info("checkmated");
                 }
@@ -144,8 +144,8 @@ public class ChessController {
                     moveObj = new Move(eventTime, from, to, color, type, special);
                     sendmsg.setBody(moveObj);
                     jsonPayload = objectMapper.writeValueAsString(sendmsg);
-                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
-                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+//                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+//                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
                     log.info("promotion");
                     gameState.setPromotion(null);
@@ -161,8 +161,8 @@ public class ChessController {
                     moveObj = new Move(eventTime, from, to, color, type, special);
                     sendmsg.setBody(moveObj);
                     jsonPayload = objectMapper.writeValueAsString(sendmsg);
-                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
-                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+//                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+//                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
                     log.info("castledRook");
                     gameState.setCastledRook(null);
@@ -178,8 +178,8 @@ public class ChessController {
                     moveObj = new Move(eventTime, from, to, color, type, special);
                     sendmsg.setBody(moveObj);
                     jsonPayload = objectMapper.writeValueAsString(sendmsg);
-                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
-                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+//                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+//                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
                     log.info("enpassanttarget");
                     gameState.setEnpassantMoved(false);
@@ -193,8 +193,8 @@ public class ChessController {
 
                     sendmsg.setBody(moveObj);
                     jsonPayload = objectMapper.writeValueAsString(sendmsg);
-                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
-                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
+//                    controlData.getConnectedVRSessions().get(0).sendMessage(new TextMessage(jsonPayload));
+//                    controlData.getConnectedVRSessions().get(1).sendMessage(new TextMessage(jsonPayload));
 
                     log.info("else");
                 }
@@ -204,6 +204,30 @@ public class ChessController {
             log.error("Error parsing move message", e);
         }
     }
+
+//    @MessageMapping("/Web/promotion")
+//    public String handlePromotion(String message) {
+//        System.out.println("Promotion : " + message);
+//
+//        // "to :" 위치를 찾고 좌표 부분을 추출
+//        // "to : " 이후의 부분을 추출
+//        int toIndex = message.indexOf("to : ");
+//        String numbersPart = message.substring(toIndex + 5); // "1,7\npromotion : r" 부분
+//
+//// ","로 분리하여 각 숫자 추출
+//        String[] numbers = numbersPart.split(",|\n"); // 쉼표나 줄바꿈 기준으로 나누기
+//        int toX = Integer.parseInt(numbers[0].trim()); // 첫 번째 숫자
+//        int toY = Integer.parseInt(numbers[1].trim()); // 두 번째 숫자
+//        char promotion = message.charAt(message.length() - 1);
+//
+//        Position promotionPosition = new Position(toX, toY);
+//
+//        log.info("promotion : " + promotion + toX + ", " + toY);
+//
+//        gameState.processPromotion(promotionPosition, promotion);
+//
+//        return message;
+//    }
 
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {

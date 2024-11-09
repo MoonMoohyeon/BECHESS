@@ -45,7 +45,7 @@ public class GameState {
 
     public boolean processMoveWEB(Move move) {
 
-        if (currentRole == "COMMANDER") {
+        if (currentRole.equals("COMMANDER")) {
 
             switchPlayer();
 //        if (isCheckmate()) {
@@ -118,6 +118,28 @@ public class GameState {
         }
         return false;
     }
+
+//    public void processPromotion(Position promotionPosition, char promotion) {
+//        // 이동할 기물을 가져옴
+//        ChessPiece piece = board.get(promotionPosition);
+//        if (piece == null) {
+//            log.error("이동하려는 위치에 기물이 없습니다.");
+//            return;
+//        }
+//
+//        if (promotion == 'q') {
+//            piece.setType("QUEEN");
+//        }
+//        else if (promotion == 'r') {
+//            piece.setType("ROOK");
+//        }
+//        else if (promotion == 'b') {
+//            piece.setType("BISHOP");
+//        }
+//        else if (promotion == 'n') {
+//            piece.setType("KNIGHT");
+//        }
+//    }
 
     public void updateBoard(Move move, Map<Position, ChessPiece> board) {
 
