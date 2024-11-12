@@ -86,7 +86,7 @@ public class VRController extends TextWebSocketHandler {
             JsonNode jsonNode = objectMapper.readTree(message.getPayload());
             System.out.println("Received JSON message: " + jsonNode.toString());
 
-            if (jsonNode.findValue("move") != null) {
+            if (jsonNode.findValue("from") != null) {
                 String payload = message.getPayload();
                 Move moveData = objectMapper.readValue(payload, Move.class);
 
